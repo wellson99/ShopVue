@@ -91,7 +91,7 @@ export default {
     }
   },
   mounted(){
-    console.log("store ",this.$store.getters.getUserState)
+    console.log("store ",this.$store.getters["uState/getUserState"])
   },
   methods: {
     toggle(){
@@ -103,7 +103,7 @@ export default {
         async (cred) =>{
           console.log("created: ", cred.user)
           localStorage.setItem("uState", JSON.stringify(await userState()))
-          this.$store.dispatch("setUserState")
+          this.$store.dispatch("uState/setUserState")
           this.$router.push("/")
         })
         .catch(error =>{
@@ -115,7 +115,7 @@ export default {
       await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPwd).then(
         async (cred) => {
           localStorage.setItem("uState", JSON.stringify(await userState()))
-          this.$store.dispatch("setUserState")
+          this.$store.dispatch("uState/setUserState")
           this.$router.push("/")
       })
       .catch(error =>{

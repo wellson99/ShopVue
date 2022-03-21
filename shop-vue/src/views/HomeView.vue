@@ -19,7 +19,7 @@
       HelloWorld,
     },
     mounted(){
-      // console.log("store ",this.$store.getters.getUserState)
+      console.log("cartStore ", this.$store.getters["uCart/getUserCart"])
     },
     methods: {
       

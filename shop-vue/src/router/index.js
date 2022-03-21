@@ -2,6 +2,9 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import AboutView from '../views/AboutView.vue'
+import productsView from '../views/productsView.vue'
+import productDetailView from '../views/productDetails.vue'
+import cartView from '../views/cartView.vue'
 import {userState} from "../../firebase/firebaseConfig"
 
 Vue.use(VueRouter)
@@ -22,13 +25,35 @@ const routes = [
     // component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue'),
     component: AboutView,
     meta: { requiresUnauth: true }
+  },
+  {
+    path: '/products',
+    name: 'products',
+    component: productsView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/productDetails',
+    name: 'productDetails',
+    component: productDetailView,
+    props: true,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/cart',
+    name: 'cart',
+    component: cartView,
+    meta: { requiresAuth: true }
   }
 ]
 
 const router = new VueRouter({
   mode: 'history',
   base: process.env.BASE_URL,
-  routes
+  routes,
+  scrollBehavior(){
+    return { x: 0, y: 0 };
+  },
 })
 
 router.beforeEach(async (to, from, next) => {
