@@ -73,7 +73,9 @@
 <script>
 /* eslint-disable */
 import {getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth"
-import {userState} from "../../firebase/firebaseConfig"
+import { doc, setDoc, updateDoc } from "firebase/firestore"; 
+import {userState, db} from "../../firebase/firebaseConfig"
+import {getProfile} from "../../firebase/functions/profile"
 
 // const auth = getAuth()
 // const uState = this.getUserState()
@@ -101,10 +103,35 @@ export default {
       const auth = getAuth()
       await createUserWithEmailAndPassword(auth, this.email, this.password).then(
         async (cred) =>{
-          console.log("created: ", cred.user)
-          localStorage.setItem("uState", JSON.stringify(await userState()))
-          this.$store.dispatch("uState/setUserState")
-          this.$router.push("/")
+          let timeNow = new Date().toLocaleDateString("en-MY", {hour12: false, hour: "numeric", minute:"numeric", second: "numeric"})
+          await setDoc(doc(db, "Users", cred.user.uid), {
+            userEmail: cred.user.email,
+            firstName: this.fName,
+            lastName: this.lName,
+            createdAt: timeNow,
+            lastLogin: timeNow,
+            imgURL: null,
+            lastLogout: null
+          }).then(async () => {
+            localStorage.setItem("uState", JSON.stringify({
+              uid: cred.user.uid,
+              email: cred.user.email,
+              imgURL: null,
+              fName: this.fName,
+              lName: this.lName
+            }))
+            this.$store.dispatch("uState/setUserState")
+            this.$router.push("/")
+          }).catch((error) => {
+            console.log(error.message)
+          })
+
+
+          // console.log("id: ", JSON.stringify(cred.user.uid))
+          // console.log("created: ", JSON.stringify(cred.user))
+          // localStorage.setItem("uState", JSON.stringify(await userState()))
+          // this.$store.dispatch("uState/setUserState")
+          // this.$router.push("/")
         })
         .catch(error =>{
           console.log(error.message)
@@ -114,9 +141,30 @@ export default {
       const auth = getAuth()
       await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPwd).then(
         async (cred) => {
-          localStorage.setItem("uState", JSON.stringify(await userState()))
-          this.$store.dispatch("uState/setUserState")
-          this.$router.push("/")
+          // localStorage.setItem("uState", JSON.stringify(await userState()))
+          // this.$store.dispatch("uState/setUserState")
+          // this.$router.push("/")
+
+          let currentTime = new Date().toLocaleDateString("en-MY", {hour12: false, hour: "numeric", minute:"numeric", second: "numeric"})
+          const docRef = doc(db, "Users", cred.user.uid)
+          await updateDoc(docRef, {
+            lastLogin: currentTime
+          }).then(async () => {
+            // localStorage.setItem("uState", JSON.stringify(await userState()))
+            let userInfo = await getProfile(cred.user.uid)
+            console.log(userInfo[0].imgURL)
+            localStorage.setItem("uState", JSON.stringify({
+              uid: cred.user.uid,
+              email: cred.user.email,
+              imgURL: userInfo[0].imgURL,
+              fName: userInfo[0].firstName,
+              lName: userInfo[0].lastName
+            }))
+            this.$store.dispatch("uState/setUserState")
+            this.$router.push("/")
+          }).catch((error) => {
+            console.log(error.message)
+          })
       })
       .catch(error =>{
         console.log(error.message)

@@ -5,6 +5,9 @@ import AboutView from '../views/AboutView.vue'
 import productsView from '../views/productsView.vue'
 import productDetailView from '../views/productDetails.vue'
 import cartView from '../views/cartView.vue'
+import purchaseView from '../views/purchaseView.vue'
+import profileView from '../views/profileView.vue'
+import reviewView from '../views/reviewView.vue'
 import {userState} from "../../firebase/firebaseConfig"
 
 Vue.use(VueRouter)
@@ -44,7 +47,26 @@ const routes = [
     name: 'cart',
     component: cartView,
     meta: { requiresAuth: true }
-  }
+  },
+  {
+    path: '/purchase',
+    name: 'purchase',
+    component: purchaseView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: profileView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/review',
+    name: 'review',
+    component: reviewView,
+    props: true,
+    meta: { requiresAuth: true }
+  },
 ]
 
 const router = new VueRouter({
@@ -61,6 +83,7 @@ router.beforeEach(async (to, from, next) => {
   const requiresUnauth = to.matched.some(record => record.meta.requiresUnauth)
 
   const isAuth = await userState()
+  // const isAuth = this.$store.getters["uState/getUserState"]
 
   if (requiresAuth && !isAuth) next('/signup')
   else if (requiresUnauth && isAuth) next('/')

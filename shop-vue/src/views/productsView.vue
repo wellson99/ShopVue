@@ -32,37 +32,48 @@
     
     <v-row class="mx-2 align-center">
       <v-col sm="12" md="6" lg="3" class="" v-for="product in products" :key="product.id">
-        <v-card rounded="lg" color="" elevation="10" width="88%" class="my-2 mx-auto" @click.prevent="changeRoute('productDetails', product)">
-        <!-- <v-card rounded="lg" color="" elevation="10" width="88%" class="my-2 mx-auto" @click.prevent="testID(product.id)"> -->
-          <v-img height="250" :src="product.prodImgURL"/>
-          <v-divider class="mx-4"/>
-          <v-card-title>{{product.prodName}}</v-card-title>
-          
-          <v-card-text>
-            <v-row align="center" class="mx-0">
-              <span class="text-body-1 font-weight-medium">RM {{product.prodPrice}}</span>
-            </v-row>
-
-            <v-row align="center" class="mx-0 mb-1">
-              <v-rating :value="product.prodRating" color="amber" dense half-increments readonly size="18" />
-              <span class="grey--text ms-2 mt-1">{{product.prodRating}} ({{product.prodReviews}})</span>
-            </v-row>
+        <v-card rounded="lg" color="" elevation="10" width="88%" class="my-2 mx-auto pointer">
+        <!-- <v-card rounded="lg" color="" elevation="10" width="88%" class="my-2 mx-auto" @click.prevent="changeRoute('productDetails', product)"> -->
+          <div @click.prevent="changeRoute('productDetails', product)">
+            <v-img height="250" :src="product.prodImgURL"/>
+            <v-divider class="mx-4"/>
+            <v-card-title>{{product.prodName}}</v-card-title>
             
-            <div class="my-1 mb-3">
-              <span>{{product.prodDescription}}</span>
-            </div>
+            <v-card-text>
+              <v-row align="center" class="mx-0">
+                <span class="text-body-1 font-weight-medium">RM {{product.prodPrice}}</span>
+              </v-row>
 
-            <v-divider/>
-            <div class="mx-0 my-1 mt-5">
-              <v-btn block large color="primary" @click.prevent="">
-                <v-icon class="mr-4">mdi-cart-plus</v-icon>
-                <span>Add To Cart</span> 
-              </v-btn>
-            </div>
-            
-          </v-card-text>
+              <v-row align="center" class="mx-0 mb-1">
+                <v-rating :value="product.prodRating" color="primary" background-color="primary" dense half-increments readonly size="18" />
+                <span class="grey--text ms-2 mt-1">{{product.prodRating}} ({{product.prodReviews}})</span>
+              </v-row>
+              
+              <div class="my-1 mb-3">
+                <span class="prodCardDesc">{{product.prodDescription}}</span>
+              </div>
+
+              <v-divider/>
+            </v-card-text>
+          </div>
+        
+          <div class="mx-4 pb-4">
+            <v-btn block large color="primary" @click.prevent="addToCart(product)">
+              <v-icon class="mr-4">mdi-cart-plus</v-icon>
+              <span>Add To Cart</span> 
+            </v-btn>
+          </div>
         </v-card>
       </v-col>
+
+      <v-snackbar v-model="showSnackbar" :timeout="1000" elevation="24" multi-line bottom text color="primary">
+        Item successfully added into your shopping cart
+        <template v-slot:action="{ attrs }">
+          <v-btn icon color="primary" v-bind="attrs" @click="showSnackbar = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </template>
+      </v-snackbar>
     </v-row>
     
   </v-container>
@@ -75,6 +86,7 @@ export default {
   data(){
     return{
       products: [],
+      showSnackbar: false
     }
   },
   created(){
@@ -88,7 +100,7 @@ export default {
       return Math.ceil(this.products.length / this.pageSize)
     }
   },
-  async mounted(){
+  mounted(){
     this.products = getProducts()
     // console.log("hello", this.products)
 
@@ -100,7 +112,51 @@ export default {
         params: {productData: product}
       })
     },
-    
+    // eslint-disable-next-line
+    // addToCart(product){
+    //   this.showSnackbar = true
+    //   // console.log("tapped ", JSON.stringify(product.id))
+    //   let cartItems = this.$store.getters["uCart/getUserCart"]
+    //   let index = cartItems.findIndex(element => element.product.productID === product.id)
+    //   if(index !== -1){
+    //     let updatedQuantity = cartItems[index].product.itemQuantity += 1
+    //     this.$store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: updatedQuantity})
+    //   }else{
+    //     // console.log("else ",this.product.itemQuantity)
+    //     this.$store.dispatch("uCart/addProductToCart", {product: {
+    //       sellerID: product.sID,
+    //       productID: product.id,
+    //       name: product.prodName,
+    //       category: product.prodCategory,
+    //       imgURL: product.prodImgURL,
+    //       price: product.prodPrice,
+    //       itemQuantity: 1
+    //     }})
+    //   }
+
+      addToCart(product){
+      this.showSnackbar = true
+      // console.log("tapped ", JSON.stringify(product.id))
+      let cartItems = this.$store.getters["uCart/getUserCart"]
+      let index = cartItems.findIndex(element => element.productID === product.id)
+      if(index !== -1){
+        let updatedQuantity = cartItems[index].itemQuantity += 1
+        this.$store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: updatedQuantity})
+      }else{
+        // console.log("else ",this.product.itemQuantity)
+        this.$store.dispatch("uCart/addProductToCart", {product: {
+          sellerID: product.sID,
+          productID: product.id,
+          name: product.prodName,
+          category: product.prodCategory,
+          imgURL: product.prodImgURL,
+          price: product.prodPrice,
+          itemQuantity: 1
+        }})
+      }
+
+
+    }
   }
 }
 </script>
@@ -110,7 +166,11 @@ export default {
   text-overflow: ellipsis;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 6;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
+}
+
+.pointer{
+  cursor: pointer;
 }
 </style>

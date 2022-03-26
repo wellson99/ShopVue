@@ -87,6 +87,15 @@
                 <span>Add To Cart</span> 
               </v-btn>
             </v-row>
+
+            <v-snackbar v-model="showSnackbar" :timeout="1000" elevation="24" multi-line bottom text color="primary">
+              Item successfully added into your shopping cart
+              <template v-slot:action="{ attrs }">
+                <v-btn icon color="primary" v-bind="attrs" @click="showSnackbar = false">
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
+              </template>
+            </v-snackbar>
           </v-card-text>
         </v-card>
       </v-col>
@@ -100,30 +109,53 @@
           <v-card-text>
             <v-row align="center" class="mx-0 d-flex justify-space-between">
               <span class="text-body-1 grey--text text--darken-2">This section display all the users' reiviews.</span>
-              <v-btn color="primary" class="ml-1" @click.prevent="">
-                <span class="text-capitalize text-body-1">Sort By</span> 
-                <v-icon right>mdi-sort</v-icon>
-              </v-btn>
+              <v-menu rounded="lg" offset-y bottom transition="slide-y-transition">
+                <template v-slot:activator="{on, attrs}">
+                  <v-btn v-bind="attrs" v-on="on" color="primary" class="ml-1">
+                    <span class="text-capitalize text-body-1">Sort By</span> 
+                    <v-icon right>mdi-sort</v-icon>
+                  </v-btn>
+                </template>
+
+                <v-list>
+                  <v-list-item :disabled="sortType === 'DateDesc'" @click.prevent="sortReviews('DateDesc')">               
+                    <strong>Date</strong> &nbsp;(Latest to Oldest)
+                  </v-list-item>
+
+                  <v-list-item :disabled="sortType === 'DateAsc'" @click.prevent="sortReviews('DateAsc')">
+                    <strong>Date</strong> &nbsp;(Oldest to Latest)
+                  </v-list-item>
+
+                  <v-list-item :disabled="sortType === 'ReviewDesc'" @click.prevent="sortReviews('ReviewDesc')">
+                    <strong>Review</strong> &nbsp;(Best to Worst)
+                  </v-list-item>
+
+                  <v-list-item :disabled="sortType === 'ReviewAsc'" @click.prevent="sortReviews('ReviewAsc')">
+                    <strong>Review</strong> &nbsp;(Worst to Best)
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+              
             </v-row>
             <v-divider class="my-5" />
 
             <div>
-              <div v-for="(item, index) in historyList" :key="index">
+              <div v-for="review in paginatedReviewsList" :key="review.id">
                 <v-row align="center" class="mx-0 mt-2 d-flex justify-space-between">
-                  <span class="text-body-1 font-weight-medium black--text">Username</span>
-                  <!-- <span class="text-body-2 grey--text text--darken-2">18 March 2022</span> -->
-                  <span class="text-body-2 grey--text text--darken-2">{{item.i}}</span>
+                  <span class="text-body-1 font-weight-medium black--text">{{review.userName}}</span>
+                  <span class="text-body-2 grey--text text--darken-2 mr-3">
+                    {{reviewDateTime(review.date)}}
+                  </span>
                 </v-row>
 
                 <v-row align="center" class="mx-0">
-                  <v-rating :value="3.5" color="primary" background-color="primary" dense half-increments readonly size="18" />
-                  <span class="ms-2 mt-1">4.5</span>
+                  <v-rating :value="review.rating" color="primary" background-color="primary" dense half-increments readonly size="18" />
+                  <span class="ms-2 mt-1">{{review.rating}}</span>
                 </v-row>
 
                 <v-row align="center" class="mx-0 mt-3">
                   <span class="text-body-1 grey--text text--darken-2">
-                    Lorem ipsum dolor, sit amet consectetur adipisicing elit. Nemo maiores minus est, inventore consequuntur laboriosam voluptate at nesciunt recusandae enim quae expedita beatae repudiandae? Eum vitae nisi consequuntur nemo quaerat!
-                    Lorem ipsum dolor, sit amet consectetur adipisicing elit. 
+                    {{review.review}}
                   </span>
                 </v-row>
                 <v-divider class="my-5" />
@@ -144,25 +176,25 @@
 </template>
 
 <script>
-import {onSnapshot, doc} from "firebase/firestore"
-import {db} from "../../firebase/firebaseConfig"
+// import {onSnapshot, doc, getDoc} from "firebase/firestore"
+// import {onSnapshot, doc} from "firebase/firestore"
+// import {db} from "../../firebase/firebaseConfig"
+import {getSingleProduct} from "../../firebase/functions/product"
+import {getProductReviews} from "../../firebase/functions/review"
 
 export default {
   data(){
     return{
-      items:[
-        {i: "a"}, {i: "b"}, {i: "c"}, {i: "d"},{i: "e"},{i: "f"},{i: "g"},{i: "h"},{i: "i"},{i: "j"},{i: "k"},{i: "l"},{i: "m"},{i: "n"},{i: "o"},
-      ],
-      // itemQuantity: 1,
       addToWishlist: false,
       cartItems: [],
+      showSnackbar: false,
       
       page: 1,
-      pageSize: 2,
+      pageSize: 4,
       listCount: 0,
-      historyList: [],
-
-      test: [],
+      paginatedReviewsList: [],
+      productReviews: [],
+      sortType: "DateDesc",
 
       product: {
         sellerID: "",
@@ -184,6 +216,7 @@ export default {
     'productData',
   ],
   computed: {
+    
     pages () {
       if(this.pageSize == null || this.listCount == null){
         return 0
@@ -191,27 +224,26 @@ export default {
       return Math.ceil(this.listCount / this.pageSize)
     }
   },
-  created(){
-    this.initPage()
-    this.updatePage(this.page)
-  },
-  mounted(){
-    const documentReference = doc(db, "Products", this.productData.id)
-    onSnapshot(documentReference, (doc) => {
-      this.product.sellerID = doc.data().sID
-      this.product.productID = doc.id
-      this.product.name = doc.data().prodName
-      this.product.category = doc.data().prodCategory
-      this.product.imgURL = doc.data().prodImgURL
-      this.product.description = doc.data().prodDescription
-      this.product.price = doc.data().prodPrice
-      this.product.quantity = doc.data().prodQuantity
-      this.product.sold = doc.data().prodSold
-      this.product.reviews = doc.data().prodReviews
-      this.product.rating = doc.data().prodRating
+  async mounted(){
+    let product = await getSingleProduct(this.productData.id)
+    product.map((prod) => {
+      this.product.sellerID = prod.sID
+      this.product.productID = prod.id
+      this.product.name = prod.prodName
+      this.product.category = prod.prodCategory
+      this.product.imgURL = prod.prodImgURL
+      this.product.description = prod.prodDescription
+      this.product.price = prod.prodPrice
+      this.product.quantity = prod.prodQuantity
+      this.product.sold = prod.prodSold
+      this.product.reviews = prod.prodReviews
+      this.product.rating = prod.prodRating
     })
 
-
+    this.productReviews = await getProductReviews(this.productData.id)
+    this.productReviews.sort((a, b) => b.date.toDate() - a.date.toDate())
+    this.initPage(this.productReviews)
+    this.updatePage(this.page)
   },
   methods: {
     itemCountIncrement(){
@@ -223,13 +255,14 @@ export default {
     wishlistProduct(){
       this.addToWishlist = !this.addToWishlist
     },
-     addToCart(){
+    addToCart(){
+      this.showSnackbar = true
       let newnum = this.product.itemQuantity
       this.cartItems = this.$store.getters["uCart/getUserCart"]
-      let index = this.cartItems.findIndex( el => el.product.productID === this.product.productID )
+      let index = this.cartItems.findIndex( el => el.productID === this.product.productID )
       if(index !== -1){
-        let updatedQuantity = this.cartItems[index].product.itemQuantity += newnum
-        this.$store.dispatch("uCart/duplicateCartItem", {index: index, quantity: updatedQuantity})
+        let updatedQuantity = this.cartItems[index].itemQuantity += newnum
+        this.$store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: updatedQuantity})
       }else{
         console.log("else ",this.product.itemQuantity)
         this.$store.dispatch("uCart/addProductToCart", {product: {
@@ -249,24 +282,56 @@ export default {
       console.log("display", JSON.stringify(this.$store.getters["uCart/getUserCart"]))
     },
 
-    initPage(){
-      this.listCount = this.items.length
+    initPage(list){
+      this.listCount = list.length
       if(this.listCount < this.pageSize){
-        this.historyList = this.items
+        this.paginatedReviewsList = list
       }else{
-        this.historyList = this.items.slice(0, this.pageSize)
+        this.paginatedReviewsList = list.slice(0, this.pageSize)
       }
     },
 
     updatePage(index){
       let start = (index - 1) * this.pageSize
       let end = index * this.pageSize
-      this.historyList = this.items.slice(start, end)
+      this.paginatedReviewsList = this.productReviews.slice(start, end)
       this.page = index
     },
 
-    reset(){
-      this.product.itemQuantity = 1
+    reviewDateTime(timestampObj){  
+      let dateObj = new Date(timestampObj.seconds * 1000) 
+      var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
+      var time = dateObj.toLocaleString(undefined, {hour12:false, hour:"numeric", minute:"numeric"})
+      return `${date} at ${time}`
+    },
+
+    sortReviews(sortBy){
+      switch(sortBy){
+        case "DateDesc":
+          this.productReviews.sort((a, b) => b.date.toDate() - a.date.toDate())
+          this.sortType = sortBy
+          this.page = 1
+          this.initPage(this.productReviews)
+          break
+        case "DateAsc":
+          this.productReviews.sort((a, b) => a.date.toDate() - b.date.toDate())
+          this.sortType = sortBy
+          this.page = 1
+          this.initPage(this.productReviews)
+          break
+        case "ReviewDesc":
+          this.productReviews.sort((a, b) => b.rating - a.rating)
+          this.sortType = sortBy
+          this.page = 1
+          this.initPage(this.productReviews)
+          break
+        case "ReviewAsc":
+          this.productReviews.sort((a, b) => a.rating - b.rating)
+          this.sortType = sortBy
+          this.page = 1
+          this.initPage(this.productReviews)
+          break
+      }
     }
     
   }

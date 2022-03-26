@@ -6,16 +6,22 @@ export default {
   },
   mutations: {
     addProductToCart(state, payload){
-      state.cart.push(payload)
+      state.cart.push(payload.product)
+      // localStorage.setItem("uCart", state.cart)
     },
     deleteProductFromCart(state, payload){
-      state.cart.splice(payload, 1)
+      // console.log("stpre ", payload)
+      state.cart.splice(payload.index, 1)
+      // localStorage.setItem("uCart", state.cart)
     },
     updateCartItemQuantity(state, payload){
-      state.cart[payload.index].product.itemQuantity = payload.updatedQuantity
+      state.cart[payload.index].itemQuantity = payload.updatedQuantity
+      // state.cart[payload.index].product.itemQuantity = payload.updatedQuantity
+      // localStorage.setItem("uCart", state.cart)
     },
-    duplicateCartItem(state, payload){
-      state.cart[payload.index].product.itemQuantity = payload.quantity
+    clearCart(state){
+      // let x = []
+      state.cart = []
     }
   },
   actions: {
@@ -28,8 +34,8 @@ export default {
     updateCartItemQuantity(state, param){
       state.commit("updateCartItemQuantity", param)
     },
-    duplicateCartItem(state, param){
-      state.commit("duplicateCartItem", param)
+    clearCart(state){
+      state.commit("clearCart")
     },
   },
   getters: {

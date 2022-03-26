@@ -15,24 +15,13 @@ function getProducts(){
   return products
 }
 
-function getSingleProduct(productID){
-  let product = []
-
+async function getSingleProduct(productID){
   const documentReference = doc(db, "Products", productID)
-  onSnapshot(documentReference, (doc) => {
-    product.sellerID = doc.data().sID
-    product.name = doc.data().prodName
-    product.category = doc.data().prodCategory
-    product.imgURL = doc.data().prodImgURL
-    product.description = doc.data().prodDescription
-    product.price = doc.data().prodPrice
-    product.quantity = doc.data().prodQuantity
-    product.sold = doc.data().prodSold
-    product.reviews = doc.data().prodReviews
-    product.rating = doc.data().prodRating
+  let product = []
+  await getDoc(documentReference).then((doc) => {
+    product.push({id: doc.id, ...doc.data()})
   })
 
-  console.log("fb ", product)
   return product
 }
 
