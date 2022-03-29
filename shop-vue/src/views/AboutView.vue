@@ -67,20 +67,19 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <loading-dialog :show.sync="showDialog" :message.sync="dialogMessage" />
   </v-container>
 </template>
 
 <script>
-/* eslint-disable */
-import {getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth"
-import { doc, setDoc, updateDoc } from "firebase/firestore"; 
-import {userState, db} from "../../firebase/firebaseConfig"
-import {getProfile} from "../../firebase/functions/profile"
-
-// const auth = getAuth()
-// const uState = this.getUserState()
+import {signInUser, signUpUser} from "../../firebase/functions/authentication"
+import loadingDialog from "../components/loadingDialog.vue"
 
 export default {
+  components:{
+    loadingDialog
+  },
   data(){
     return{
       fName: "",
@@ -90,6 +89,8 @@ export default {
       loginEmail: "",
       loginPwd: "",
       isSignUp: true,
+      showDialog: false,
+      dialogMessage: "",
     }
   },
   mounted(){
@@ -100,80 +101,59 @@ export default {
       this.isSignUp = !this.isSignUp
     },
     async signUpUser(){
-      const auth = getAuth()
-      await createUserWithEmailAndPassword(auth, this.email, this.password).then(
-        async (cred) =>{
-          let timeNow = new Date().toLocaleDateString("en-MY", {hour12: false, hour: "numeric", minute:"numeric", second: "numeric"})
-          await setDoc(doc(db, "Users", cred.user.uid), {
-            userEmail: cred.user.email,
-            firstName: this.fName,
-            lastName: this.lName,
-            createdAt: timeNow,
-            lastLogin: timeNow,
-            imgURL: null,
-            lastLogout: null
-          }).then(async () => {
-            localStorage.setItem("uState", JSON.stringify({
-              uid: cred.user.uid,
-              email: cred.user.email,
-              imgURL: null,
-              fName: this.fName,
-              lName: this.lName
-            }))
-            this.$store.dispatch("uState/setUserState")
-            this.$router.push("/")
-          }).catch((error) => {
-            console.log(error.message)
-          })
+      this.showDialog = true
+      this.dialogMessage = "Hang on, creating your account ..."
+      let signupDetails = {
+        email: this.email,
+        pwd: this.password,
+        fName: this.fName,
+        lName: this.lName
+      }
 
-
-          // console.log("id: ", JSON.stringify(cred.user.uid))
-          // console.log("created: ", JSON.stringify(cred.user))
-          // localStorage.setItem("uState", JSON.stringify(await userState()))
-          // this.$store.dispatch("uState/setUserState")
-          // this.$router.push("/")
-        })
-        .catch(error =>{
-          console.log(error.message)
-        })
+      await signUpUser(signupDetails).then((result) => {
+        if(result.success){
+          localStorage.setItem("uState", JSON.stringify({
+            uid: result.uid,
+            email: result.userDetails[0].userEmail,
+            imgURL: result.userDetails[0].imgURL,
+            fName: result.userDetails[0].firstName,
+            lName: result.userDetails[0].lastName,
+          }))
+          this.$store.dispatch("uState/setUserState")
+          this.$router.push("/")
+          this.showDialog = false
+        }else{
+          console.log(JSON.stringify(result.message))
+          this.showDialog = false
+        }
+      })
     },
     async loginInUser(){
-      const auth = getAuth()
-      await signInWithEmailAndPassword(auth, this.loginEmail, this.loginPwd).then(
-        async (cred) => {
-          // localStorage.setItem("uState", JSON.stringify(await userState()))
-          // this.$store.dispatch("uState/setUserState")
-          // this.$router.push("/")
+      this.showDialog = true
+      this.dialogMessage = "Hang on, signing you in ..."
+      let signinDetails = {
+        email: this.loginEmail,
+        pwd: this.loginPwd
+      }
 
-          let currentTime = new Date().toLocaleDateString("en-MY", {hour12: false, hour: "numeric", minute:"numeric", second: "numeric"})
-          const docRef = doc(db, "Users", cred.user.uid)
-          await updateDoc(docRef, {
-            lastLogin: currentTime
-          }).then(async () => {
-            // localStorage.setItem("uState", JSON.stringify(await userState()))
-            let userInfo = await getProfile(cred.user.uid)
-            console.log(userInfo[0].imgURL)
-            localStorage.setItem("uState", JSON.stringify({
-              uid: cred.user.uid,
-              email: cred.user.email,
-              imgURL: userInfo[0].imgURL,
-              fName: userInfo[0].firstName,
-              lName: userInfo[0].lastName
-            }))
-            this.$store.dispatch("uState/setUserState")
-            this.$router.push("/")
-          }).catch((error) => {
-            console.log(error.message)
-          })
-      })
-      .catch(error =>{
-        console.log(error.message)
+      await signInUser(signinDetails).then((result) => {
+        if(result.success){
+          localStorage.setItem("uState", JSON.stringify({
+            uid: result.uid,
+            email: result.userDetails[0].userEmail,
+            imgURL: result.userDetails[0].imgURL,
+            fName: result.userDetails[0].firstName,
+            lName: result.userDetails[0].lastName,
+          }))
+          this.$store.dispatch("uState/setUserState")
+          this.$router.push("/")
+          this.showDialog = false
+        }else{
+          console.log(JSON.stringify(result.message))
+          this.showDialog = false
+        }
       })
     },
-    async getUserState(){
-      let uState = await userState()
-      return uState
-    }
   }
 }
 </script>

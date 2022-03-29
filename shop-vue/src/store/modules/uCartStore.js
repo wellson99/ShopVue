@@ -22,6 +22,7 @@ export default {
     clearCart(state){
       // let x = []
       state.cart = []
+      localStorage.removeItem("uCart")
     }
   },
   actions: {

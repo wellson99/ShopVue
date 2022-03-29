@@ -1,4 +1,4 @@
-import {doc, updateDoc, collection, addDoc, getDocs} from "firebase/firestore";
+import {doc, updateDoc, collection, addDoc, getDocs, Timestamp} from "firebase/firestore";
 import {db} from "../firebaseConfig"
 
 async function uploadReview(review){
@@ -16,7 +16,7 @@ async function uploadReview(review){
       productID: review.productID,
       rating: review.userRating,
       review: review.userReview,
-      date: new Date().toLocaleDateString("en-MY", {hour12: false, hour:"numeric", minute:"numeric", second:"numeric"})
+      date: Timestamp.now()
     }).then(() => {
       result = true
     }).catch(error => result = error.message)

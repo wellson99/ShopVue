@@ -96,30 +96,24 @@
       </v-col>
     </v-row>
 
-    <v-dialog v-model="uploadLoading" persistent width="380">
-      <v-card class="pa-0">
-        <v-card-text>
-          <v-row>
-            <v-col class="align-center justify-center text-center mt-10"> 
-              <v-progress-circular indeterminate :width="8" :size="80" color="primary"/>
-              <p class="text-body-1 grey--text text--darken-2 mt-8">Hang on, uploading your review ...</p>
-            </v-col>
-          </v-row>
-          
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <loading-dialog :show.sync="showDialog" :message.sync="dialogMessage" />
   </v-container>
 </template>
 
 <script>
 import {getSinglePurchase} from "../../firebase/functions/purchased"
 import {uploadReview} from "../../firebase/functions/review"
+import loadingDialog from "../components/loadingDialog.vue"
 
 export default {
+  components:{
+    loadingDialog,
+  },
   data(){
     return{
-      uploadLoading: false,
+      // uploadLoading: false,
+      showDialog: false,
+      dialogMessage: "",
       rating: 0,
       review: null,
       purchaseItem: [],
@@ -154,6 +148,7 @@ export default {
   },
   computed:{
     purchaseDateTime(){  
+      if(this.itemDetails.purcTime === null) return ""
       let dateObj = new Date(this.itemDetails.purcTime.seconds * 1000) 
       var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
       var time = dateObj.toLocaleString(undefined, {hour12:true, hour:"numeric", minute:"numeric"})
@@ -162,7 +157,8 @@ export default {
   },
   methods:{
     async uploadReview(){
-      this.uploadLoading = true
+      this.showDialog = true
+      this.dialogMessage = "Hang on, uploading your review ..."
 
       const userState = JSON.parse(this.$store.getters["uState/getUserState"])
 
@@ -191,7 +187,7 @@ export default {
         if(result){
           setTimeout(function(){
             router.push({path: "/purchase", replace: true})
-            this.uploadLoading = false
+            this.showDialog = false
           }, 3000)
         }else{
           console.log(result.message)

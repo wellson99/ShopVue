@@ -65,7 +65,7 @@
               </v-list-item>
 
               <v-list-item>
-                <v-btn text color="primary" width="100%" @click.prevent="signOutUser()">
+                <v-btn text color="primary" width="100%" @click.prevent="signOut()">
                   <v-icon left>mdi-logout</v-icon>
                   Logout
                 </v-btn>
@@ -75,23 +75,28 @@
         </div> 
       </template>
     </v-toolbar>
+
+    <loading-dialog :show.sync="showDialog" :message.sync="dialogMessage" />
   </nav>
 </template>
 
 <script>
 /* eslint-disable */
-import { getAuth, signOut } from 'firebase/auth'
-import { doc, updateDoc } from "firebase/firestore";
-import { db} from "../../firebase/firebaseConfig"
-
+import {signOutUser} from "../../firebase/functions/authentication"
+import loadingDialog from "../components/loadingDialog.vue"
 // const isAuth = await userState()
 
 export default {
   name: "NavBar",
+  components:{
+    loadingDialog
+  },
   data() {
     return{
       cart: [],
-      itemsInCart: null
+      itemsInCart: null,
+      showDialog: false,
+      dialogMessage: "",
     }
   },
   computed:{
@@ -120,29 +125,21 @@ export default {
     }
   },
   methods: {
-    // dropdownFunction(func){
-    //   func();
-    // },
-    async signOutUser(){
-      const auth = getAuth()
+    async signOut(){
+      this.showDialog = true
+      this.dialogMessage = "Hang on, signing you out ..."
       const userState = JSON.parse(this.userState)
-      // const userState = this.userState
-      // console.log(JSON.stringify(userState))
-      await signOut(auth).then(async () => {
-        let currentTime = new Date().toLocaleDateString("en-MY", {hour12: false, hour: "numeric", minute:"numeric", second: "numeric"})
-        const docRef = doc(db, "Users", userState.uid)
-        await updateDoc(docRef, {
-          lastLogout: currentTime
-        }).then(() => {
+      await signOutUser(userState.uid).then((result) => {
+        if(result.success){
           this.$store.dispatch("uState/clearUserState")
+          this.$store.dispatch("uCart/clearCart")
           this.$router.push("/signup")
-        }).catch((error) => {
-          console.log(error.message)
-        })
+          this.showDialog = false
+        }else{
+          this.showDialog = false
+          console.log(result.message)
+        }
       })
-
-      // localStorage.removeItem("uState")
-      // this.$router.push("/signup")
     },
     changeRoute(route){
       this.$router.push(route)

@@ -3,7 +3,9 @@
     <nav-bar/>
 
     <v-main>
-      <router-view/>
+      <v-fade-transition :hide-on-leave="true">
+        <router-view/>
+      </v-fade-transition>
     </v-main>
   </v-app>
 </template>
