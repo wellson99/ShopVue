@@ -1,13 +1,6 @@
 <template>
   <v-container>
-    <v-row class="mx-2 align-center">
-      <v-col >
-        <span class="text-h5 font-weight-medium">Profile</span>
-        <br class="mb-1">
-        <span class="text-body-1 grey--text text--darken-2">All of your profile info will display here here.</span>
-        <v-divider class="mt-3"/>
-      </v-col>
-    </v-row>
+    <page-header :title="headerTitle" :description="headerDesc" />
 
     <template v-if="!pageLoading">
       <v-row class="mx-2 align-center-top justify-center">
@@ -21,7 +14,6 @@
                       <img :src="profile.imgURL" :alt="userFullName">
                     </v-avatar>
                   </template>
-
                   <template v-if="profile.imgURL === null">
                     <v-avatar size="180" color="background">
                       <span class="primary--text text-h3 font-weight-medium">{{userInitials}}</span>
@@ -32,12 +24,9 @@
                 <div class="pa-5">
                   <div>User Email</div>
                   <p class="text-h6 text--primary">{{profile.email}}</p>
-
                   <div>Username</div>
                   <p class="text-h6 text--primary">{{userFullName}}</p>
-
                   <div>Account Created At</div>
-                  <!-- <p class="text-h6 text--primary">{{createdAtDateTime(profile.createdAt)}}</p> -->
                   <p class="text-h6 text--primary">{{createdAtDateTime}}</p>
                 </div>
               </v-row>
@@ -54,17 +43,12 @@
                   <v-card-title class="primary">
                     <span class="white--text">Edit Profile</span>
                     <v-spacer></v-spacer>
-                    
                     <v-btn dark icon @click.stop="dialog = false">
                       <v-icon large>mdi-close</v-icon>
                     </v-btn>
                   </v-card-title>
                 
-
                   <v-card-text class="background pt-5">
-                    <!-- <div>Purchase Date</div>
-                    <p class="text-h6 text--primary">ssss</p> -->
-                    
                     <v-row>
                       <v-col cols="8">
                         <div>User Email</div>
@@ -77,7 +61,6 @@
                         <div>First Name</div>
                         <v-text-field solo label="Solo" v-model="profile.firstName" placeholder="Pick an avatar" clearable hide-details/>
                       </v-col>
-
                       <v-col cols="6">
                         <div>Last Name</div>
                         <v-text-field solo label="Solo" v-model="profile.lastName" placeholder="Pick an avatar" clearable hide-details/>
@@ -100,16 +83,12 @@
                         </v-btn>
                       </v-col>
                     </v-row>
-
                   </v-card-text>
                 </v-card>
-
                 <loading-dialog :show.sync="showDialog" :message.sync="dialogMessage" />
               </v-dialog>
-
             </v-card-text>
           </v-card>
-
         </v-col>
       </v-row>
     </template>
@@ -121,16 +100,18 @@
 
 <script>
 import {getProfile, updateProfile} from "../../firebase/functions/profile"
-import snackBar from "../components/snackbar.vue"
-import loadingDialog from "../components/loadingDialog.vue"
+import snackBar from "../components/Reuseable/snackbar.vue"
+import loadingDialog from "../components/Reuseable/loadingDialog.vue"
+import pageHeader from "../components/Reuseable/pageHeader.vue"
 
 export default {
   components:{
-    snackBar,
-    loadingDialog,
+    snackBar, loadingDialog, pageHeader
   },
   data(){
     return{
+      headerTitle: "Profile",
+      headerDesc: "All of your profile info will display here here.",
       pageLoading: false,
       loadingDialog: true,
       loadingMessage: "Hang on, fetching data ...",

@@ -1,4 +1,4 @@
-import {doc, updateDoc, collection, addDoc, getDocs, Timestamp} from "firebase/firestore";
+import {doc, updateDoc, collection, addDoc, getDocs, getDoc, Timestamp} from "firebase/firestore";
 import {db} from "../firebaseConfig"
 
 async function uploadReview(review){
@@ -17,8 +17,29 @@ async function uploadReview(review){
       rating: review.userRating,
       review: review.userReview,
       date: Timestamp.now()
-    }).then(() => {
-      result = true
+    }).then(async () => {
+      let product = []
+      var prodRating, prodReviews, updatedRating, updatedReviews
+      const docRef = doc(db, "Products", review.productID)
+      await getDoc(docRef).then((doc) => {
+        product.push({id: doc.id, ...doc.data()})
+      })
+      console.log(JSON.stringify(product[0].id))
+      prodRating = product[0].prodRating
+      prodReviews = product[0].prodReviews
+      updatedReviews = prodReviews + 1
+
+      if(prodReviews === 0){
+        updatedRating = prodRating + review.userRating
+      }else{
+        let totalRating = prodRating * prodReviews
+        updatedRating = (totalRating + review.userRating) / updatedReviews
+      }
+      await updateDoc(docRef, {
+        prodRating: Number(updatedRating.toFixed(1)),
+        prodReviews: updatedReviews
+      }).then(() => result = true)
+
     }).catch(error => result = error.message)
   }).catch(error => result = error.message)
 

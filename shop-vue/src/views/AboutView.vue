@@ -11,148 +11,53 @@
         <v-card elevation="4" outlined class="rounded-lg">
           <v-row lign="center" justify="center">
             <v-col class="pa-10">
-              <div v-show="isSignUp">
-                <p class="text-h4 text-center pb-5">Sign Up</p>
-                <v-form ref="form" lazy-validation>
-                  <v-row>
-                    <v-col cols="6" class="ma-0">
-                      <v-text-field v-model="fName"  label="Firstname" outlined required />
-                    </v-col>
+              <v-slide-x-transition hide-on-leave>
+                <sign-in-form v-show="!isSignUp" :signUpCheckProp="isSignUp" :dialogProp="dialog" v-on:toggle="changeForm($event)"
+                   v-on:loginInUser="toggleDialog($event)" />
+              </v-slide-x-transition>
+              
+              <v-slide-x-reverse-transition hide-on-leave>
+                <sign-up-form v-show="isSignUp" :signUpCheckProp="isSignUp" :dialogProp="dialog" v-on:toggle="changeForm($event)" 
+                    v-on:signUpUser="toggleDialog($event)" />
+              </v-slide-x-reverse-transition>
 
-                    <v-col cols="6">
-                      <v-text-field v-model="lName"  label="Lastname" outlined required />
-                    </v-col>
-                  
-                    <v-col cols="12">
-                      <v-text-field v-model="email"  label="Email" outlined required />
-                    </v-col>
-                  
-                    <v-col cols="12">
-                      <v-text-field v-model="password" :counter="10"  label="Password" outlined required />
-                    </v-col>
-                  
-                    <v-col cols="12" class="text-center">
-                      <v-btn elevation="6" large  color="primary" class="mr-4" @click.prevent="signUpUser" >Sign Up</v-btn>
-                    </v-col>
-                    <v-col cols="12" class="text-center">
-                      <v-btn text color="primary" @click.prevent="toggle">Already have an account? Log in now!</v-btn>
-                    </v-col>
-                  </v-row>
-                </v-form>
-              </div>
-
-              <div v-show="!isSignUp">
-                <p class="text-h4 text-center pb-5">Log In</p>
-                <v-form ref="form" lazy-validation>
-                  <v-row>
-                    <v-col cols="12">
-                      <v-text-field v-model="loginEmail"  label="Email" outlined required />
-                    </v-col>
-                  
-                    <v-col cols="12">
-                      <v-text-field v-model="loginPwd" :counter="10"  label="Password" outlined required />
-                    </v-col>
-                  
-                    <v-col cols="12" class="text-center">
-                      <v-btn elevation="6" large  color="primary" class="mr-4" @click.prevent="loginInUser" >Log In</v-btn>
-                    </v-col>
-                    <v-col cols="12" class="text-center">
-                      <v-btn text color="primary" @click.prevent="toggle">Don't have an account? Sign up now!</v-btn>
-                    </v-col>
-                  </v-row>
-                </v-form>
-              </div>
             </v-col>
           </v-row>  
         </v-card>
       </v-col>
     </v-row>
 
-    <loading-dialog :show.sync="showDialog" :message.sync="dialogMessage" />
+    <loading-dialog :show.sync="dialog.show" :message.sync="dialog.message" />
   </v-container>
 </template>
 
 <script>
-import {signInUser, signUpUser} from "../../firebase/functions/authentication"
-import loadingDialog from "../components/loadingDialog.vue"
+import signInForm from "../components/Authentication/signIn.vue"
+import signUpForm from "../components/Authentication/signUp.vue"
+import loadingDialog from "../components/Reuseable/loadingDialog.vue"
 
 export default {
   components:{
-    loadingDialog
+    loadingDialog, signInForm, signUpForm
   },
   data(){
     return{
-      fName: "",
-      lName: "",
-      email: "",
-      password: "",
-      loginEmail: "",
-      loginPwd: "",
-      isSignUp: true,
-      showDialog: false,
-      dialogMessage: "",
+      isSignUp: false,
+      dialog: {
+        show: false,
+        message: null,
+      },
     }
   },
   mounted(){
     console.log("store ",this.$store.getters["uState/getUserState"])
   },
   methods: {
-    toggle(){
-      this.isSignUp = !this.isSignUp
+    changeForm(value){
+      this.isSignUp = value
     },
-    async signUpUser(){
-      this.showDialog = true
-      this.dialogMessage = "Hang on, creating your account ..."
-      let signupDetails = {
-        email: this.email,
-        pwd: this.password,
-        fName: this.fName,
-        lName: this.lName
-      }
-
-      await signUpUser(signupDetails).then((result) => {
-        if(result.success){
-          localStorage.setItem("uState", JSON.stringify({
-            uid: result.uid,
-            email: result.userDetails[0].userEmail,
-            imgURL: result.userDetails[0].imgURL,
-            fName: result.userDetails[0].firstName,
-            lName: result.userDetails[0].lastName,
-          }))
-          this.$store.dispatch("uState/setUserState")
-          this.$router.push("/")
-          this.showDialog = false
-        }else{
-          console.log(JSON.stringify(result.message))
-          this.showDialog = false
-        }
-      })
-    },
-    async loginInUser(){
-      this.showDialog = true
-      this.dialogMessage = "Hang on, signing you in ..."
-      let signinDetails = {
-        email: this.loginEmail,
-        pwd: this.loginPwd
-      }
-
-      await signInUser(signinDetails).then((result) => {
-        if(result.success){
-          localStorage.setItem("uState", JSON.stringify({
-            uid: result.uid,
-            email: result.userDetails[0].userEmail,
-            imgURL: result.userDetails[0].imgURL,
-            fName: result.userDetails[0].firstName,
-            lName: result.userDetails[0].lastName,
-          }))
-          this.$store.dispatch("uState/setUserState")
-          this.$router.push("/")
-          this.showDialog = false
-        }else{
-          console.log(JSON.stringify(result.message))
-          this.showDialog = false
-        }
-      })
+    toggleDialog(dialog){
+      this.dialog = dialog
     },
   }
 }

@@ -1,4 +1,4 @@
-import {collection, getDocs, getDoc, doc, addDoc, Timestamp} from "firebase/firestore"
+import {collection, getDocs, getDoc, doc, addDoc, Timestamp, updateDoc, increment} from "firebase/firestore"
 import {db} from "../firebaseConfig"
 
 async function getPurchases(userID){
@@ -31,9 +31,17 @@ async function purchase(purchaseInfo, userID){
     total: purchaseInfo.grandTotal,
     delivery: purchaseInfo.deliveryType,
     time: Timestamp.now()
-  })
-  .then(() => result = {success: true})
-  .catch((error) => result = {success: false, message: error.message})
+  }).then(() => {
+    purchaseInfo.cartItems.forEach(async (item) => {
+      const docRef = doc(db, "Products", item.productID)
+      await updateDoc(docRef, {
+        prodQuantity: increment(-item.itemQuantity),
+        prodSold: increment(item.itemQuantity)
+      })
+      .catch((error) => result = {success: false, message: error.message})
+    })
+    result = {success: true}
+  }).catch((error) => result = {success: false, message: error.message})
 
   return result 
 }

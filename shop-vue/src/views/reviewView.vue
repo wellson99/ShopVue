@@ -1,13 +1,6 @@
 <template>
   <v-container>
-    <v-row class="mx-2 align-center">
-      <v-col >
-        <span class="text-h5 font-weight-medium">Profile</span>
-        <br class="mb-1">
-        <span class="text-body-1 grey--text text--darken-2">All of your profile info will display here here.</span>
-        <v-divider class="mt-3"/>
-      </v-col>
-    </v-row>
+    <page-header :title="headerTitle" :description="headerDesc" />
 
     <v-row class="mx-2 align-center-top justify-center">
       <v-col sm="12" md="7" lg="7" class="">
@@ -103,15 +96,17 @@
 <script>
 import {getSinglePurchase} from "../../firebase/functions/purchased"
 import {uploadReview} from "../../firebase/functions/review"
-import loadingDialog from "../components/loadingDialog.vue"
+import loadingDialog from "../components/Reuseable/loadingDialog.vue"
+import pageHeader from "../components/Reuseable/pageHeader.vue"
 
 export default {
   components:{
-    loadingDialog,
+    loadingDialog, pageHeader
   },
   data(){
     return{
-      // uploadLoading: false,
+      headerTitle: "Profile",
+      headerDesc: "All of your profile info will display here here.",
       showDialog: false,
       dialogMessage: "",
       rating: 0,
