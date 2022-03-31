@@ -83,7 +83,7 @@
 <script>
 /* eslint-disable */
 import {signOutUser} from "../../firebase/functions/authentication"
-import loadingDialog from "../components/loadingDialog.vue"
+import loadingDialog from "../components/Reuseable/loadingDialog.vue"
 // const isAuth = await userState()
 
 export default {
