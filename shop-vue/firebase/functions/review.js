@@ -3,7 +3,7 @@ import {db} from "../firebaseConfig"
 
 async function uploadReview(review){
   var result
-  const documentReference = doc(db, "Users", review.userID, "Purchase", review.purchaseID)
+  const documentReference = doc(db, "Users", review.userID, "Purchase", review.purcID)
   await updateDoc(documentReference, {
     items: review.updatedItemsList
   }).then(async () => {
@@ -12,7 +12,7 @@ async function uploadReview(review){
     await addDoc(collectionReference, {
       userID: review.userID,
       userName: review.userName,
-      purchaseID: review.purchaseID,
+      purchaseID: review.purcID,
       productID: review.productID,
       rating: review.userRating,
       review: review.userReview,
@@ -24,7 +24,6 @@ async function uploadReview(review){
       await getDoc(docRef).then((doc) => {
         product.push({id: doc.id, ...doc.data()})
       })
-      console.log(JSON.stringify(product[0].id))
       prodRating = product[0].prodRating
       prodReviews = product[0].prodReviews
       updatedReviews = prodReviews + 1

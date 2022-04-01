@@ -1,14 +1,5 @@
 <template>
   <v-container>
-    <!-- <v-row class="mx-2 align-center">
-      <v-col >
-        <span class="text-h5 font-weight-medium">Products</span>
-        <br class="mb-1">
-        <span class="text-body-1 grey--text text--darken-2">Find all the products here. </span>
-        <span v-show="!pageLoading" class="text-body-1 grey--text text--darken-2">There are a total of {{products.length}} products.</span>
-        <v-divider class="mt-3"/>
-      </v-col>
-    </v-row> -->
     <page-header :title="headerTitle" :description="headerDesc" />
 
     <template v-if="!pageLoading">
@@ -20,6 +11,7 @@
 </template>
 
 <script>
+import {onMounted, ref} from '@vue/composition-api'
 import {getProducts} from "../../firebase/functions/product"
 import loadingDialog from "../components/Reuseable/loadingDialog.vue"
 import productsWrapper from "../components/Products/productsWrapper.vue"
@@ -29,22 +21,24 @@ export default {
   components:{
     loadingDialog, productsWrapper, pageHeader
   },
-  data(){
-    return{
-      headerTitle: "Products",
-      headerDesc: "Find all the products here. ",
-      pageLoading: true,
-      loadingDialog: true,
-      loadingMessage: "Hang on, fetching data ...",
-      products: [],
-    }
-  },
-  async mounted(){
-    this.products = await getProducts()
-    setTimeout(() => {
-      this.pageLoading = false
-      this.loadingDialog = false
-    }, 750)
-  },
+  setup(){
+    const headerTitle = ref("Products")
+    const headerDesc = ref("Find all the products here.")
+    const pageLoading = ref(true)
+    const loadingDialog = ref(true)
+    const loadingMessage = ref("Hang on, fetching data ...")
+    const products = ref([])
+
+    onMounted(async () => {
+      products.value = await getProducts()
+      headerDesc.value = `Find all the products here. There are a total of ${products.value.length} products.`
+      setTimeout(() => {
+        pageLoading.value = false
+        loadingDialog.value = false
+      }, 750)
+    })
+
+    return {headerTitle, headerDesc, pageLoading, loadingDialog, loadingMessage, products}
+  }
 }
 </script>

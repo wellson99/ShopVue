@@ -78,7 +78,7 @@
 
             <v-row class="py-4">
               <v-col class="text-center">
-                <v-btn color="primary" large width="50%" @click.prevent="uploadReview()">
+                <v-btn color="primary" large width="50%" @click.prevent="uploadUserReview()">
                   <v-icon left>mdi-file-edit</v-icon>
                   Post Review
                 </v-btn>
@@ -94,6 +94,10 @@
 </template>
 
 <script>
+/* eslint-disable */ 
+import store from "@/store/index"
+import router from "@/router/index"
+import {computed, onMounted, ref} from '@vue/composition-api'
 import {getSinglePurchase} from "../../firebase/functions/purchased"
 import {uploadReview} from "../../firebase/functions/review"
 import loadingDialog from "../components/Reuseable/loadingDialog.vue"
@@ -103,98 +107,73 @@ export default {
   components:{
     loadingDialog, pageHeader
   },
-  data(){
-    return{
-      headerTitle: "Profile",
-      headerDesc: "All of your profile info will display here here.",
-      showDialog: false,
-      dialogMessage: "",
-      rating: 0,
-      review: null,
-      purchaseItem: [],
-      itemDetails: {
-        purcID: null,
-        purcTime: null,
-        name: null,
-        imgURL: null,
-        price: 0,
-        itemQuantity: 0,
-      }
-    }
-  },
-  props:[
-    "purchaseID",
-    "index"
-  ],
-  async mounted(){
-    const userState = JSON.parse(this.$store.getters["uState/getUserState"])
-    this.purchaseItem = await getSinglePurchase(userState.uid, this.purchaseID)
-    // console.log(JSON.stringify(this.purchaseItem[0].id))
-
-    this.purchaseItem.map((obj) => {
-      this.itemDetails.purcID = obj.id
-      this.itemDetails.purcTime = obj.time
-      this.itemDetails.name = obj.items[this.index].name
-      this.itemDetails.imgURL = obj.items[this.index].imgURL
-      this.itemDetails.price = obj.items[this.index].price
-      this.itemDetails.itemQuantity = obj.items[this.index].itemQuantity
-      // console.log(JSON.stringify(obj.items[this.index].name))
+  setup(){
+    const headerTitle = ref("Profile")
+    const headerDesc = ref("All of your profile info will display here here.")
+    const showDialog = ref(false)
+    const dialogMessage = ref(null)
+    const rating = ref(0)
+    const review = ref(null)
+    const purchaseItems = ref([])
+    const itemDetails = ref({
+      purcID: null, purcTime: null, name: null, imgURL: null, price: 0, itemQuantity: 0
     })
-  },
-  computed:{
-    purchaseDateTime(){  
-      if(this.itemDetails.purcTime === null) return ""
-      let dateObj = new Date(this.itemDetails.purcTime.seconds * 1000) 
+    const route = router.app.$route.params
+
+    const purchaseDateTime = computed(() => {
+      if(itemDetails.value.purcTime === null) return ""
+      let dateObj = new Date(itemDetails.value.purcTime.seconds * 1000) 
       var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
       var time = dateObj.toLocaleString(undefined, {hour12:true, hour:"numeric", minute:"numeric"})
       return `${date} - ${time}`
-    },
-  },
-  methods:{
-    async uploadReview(){
-      this.showDialog = true
-      this.dialogMessage = "Hang on, uploading your review ..."
+    })
 
-      const userState = JSON.parse(this.$store.getters["uState/getUserState"])
+    const updateInput = (eventVal) => {
+      rating.value = eventVal
+    }
+    const uploadUserReview = async () => {
+      showDialog.value = true
+      dialogMessage.value = "Hang on, uploading your review ..."
+      const userState = JSON.parse(store.getters["uState/getUserState"])
+      let itemsList = purchaseItems.value[0].items
+      itemsList[route.index].rating = rating.value
+      itemsList[route.index].review = review.value
 
-      let itemsList = this.purchaseItem[0].items
-      // console.log(JSON.stringify(itemsList[this.index]))
-      itemsList[this.index].rating = this.rating
-      itemsList[this.index].review = this.review
-      // console.log("after\n", JSON.stringify(itemsList))
-
-      // eslint-disable-next-line
-      let review = {
+      let userReview = {
         userID: userState.uid,
         userName: `${userState.fName} ${userState.lName}`,
-        purchaseID: this.purchaseID,
+        purcID: route.purcID,
         updatedItemsList: itemsList,
-        productID: itemsList[this.index].productID,
-        userRating: this.rating,
-        userReview: this.review
+        productID: itemsList[route.index].productID,
+        userRating: rating.value,
+        userReview: review.value
       }
-
-      // console.log(JSON.stringify(review.userID))
-
-      // await uploadReview(userState.uid, this.purchaseID, itemsList).then(
-      await uploadReview(review).then((result) => {
-        let router = this.$router
+      await uploadReview(userReview).then((result) => {
         if(result){
-          setTimeout(function(){
+          setTimeout(() => {
             router.push({path: "/purchase", replace: true})
-            this.showDialog = false
-          }, 3000)
+            showDialog.value = false
+          }, 1500)
         }else{
           console.log(result.message)
         }
       })
-      
-      
-    },
-    updateInput(value) {
-      this.rating = value
-      // console.log(this.rating);
     }
+
+    onMounted(async () => {
+      const userState = JSON.parse(store.getters["uState/getUserState"])
+      purchaseItems.value = await getSinglePurchase(userState.uid, route.purcID)
+      purchaseItems.value.map((purc) => {
+        itemDetails.value.purcID = purc.id
+        itemDetails.value.purcTime = purc.time
+        itemDetails.value.name = purc.items[route.index].name
+        itemDetails.value.imgURL = purc.items[route.index].imgURL
+        itemDetails.value.price = purc.items[route.index].price
+        itemDetails.value.itemQuantity = purc.items[route.index].itemQuantity
+      })
+    })
+
+    return {headerTitle, headerDesc, showDialog, dialogMessage, rating, review, purchaseItems, itemDetails, purchaseDateTime, updateInput, uploadUserReview}
   }
 }
 </script>

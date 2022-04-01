@@ -43,6 +43,9 @@
 </template>
 
 <script>
+import store from "@/store/index"
+import router from "@/router/index"
+import {computed, onMounted, ref} from '@vue/composition-api'
 import {purchase} from "../../../firebase/functions/purchased"
 import loadingDialog from "../../components/Reuseable/loadingDialog.vue"
 
@@ -51,65 +54,61 @@ export default {
   components: {
     loadingDialog
   },
-  data(){
-    return{
-      showDialog: false,
-      dialogMessage: "",
-      cartItems: [],
-      selectedDeliveryType: {type: "Standard Delivery", price: 0, show: "Standard Delivery - Free"},
-      deliveryType: [
-        {type: "Standard Delivery", price: 0, show: "Standard Delivery - Free"},
-        {type: "Premium Delivery", price: 9, show: "Premium Delivery - RM 9"},
-      ],
-    }
-  },
-  mounted(){
-    this.cartItems = this.$store.getters["uCart/getUserCart"]
-  },
-  computed:{
-    cartTotalPrice(){
-      let cart = this.$store.getters["uCart/getUserCart"]
+  setup(){
+    const showDialog = ref(false)
+    const dialogMessage = ref(null)
+    const cartItems = ref([])
+    const selectedDeliveryType = ref({type: "Standard Delivery", price: 0, show: "Standard Delivery - Free"})
+    const deliveryType = ref([
+      {type: "Standard Delivery", price: 0, show: "Standard Delivery - Free"},
+      {type: "Premium Delivery", price: 9, show: "Premium Delivery - RM 9"},
+    ])
+
+    const cartTotalPrice = computed(() => {
+      let cart = cartItems.value
       let cartTotalPrice = 0
       for(let index = 0; index < cart.length; index++){
         var itemTotalPrice = cart[index].price * cart[index].itemQuantity
         cartTotalPrice += itemTotalPrice
       }
       return cartTotalPrice.toFixed(2)
-    },
-    calculateGrandTotal(){
+    })
+    const calculateGrandTotal = computed(() => {
       let grandTotal = 0
-      grandTotal = parseFloat(this.cartTotalPrice) + parseFloat(this.selectedDeliveryType.price)
+      grandTotal = parseFloat(cartTotalPrice.value) + parseFloat(selectedDeliveryType.value.price)
       return grandTotal.toFixed(2)
-    },
-  },
-  methods: {
-    async purchaseItems(){
-      this.showDialog = true
-      this.dialogMessage = "Hang on, processing your purchase ..."
-      this.cartItems = this.cartItems.map(item => ({...item, rating: null, review: null}))
-      const userState = JSON.parse(this.$store.getters["uState/getUserState"])
-      let purchaseInfo = {
-        cartItems: this.cartItems,
-        grandTotal: this.calculateGrandTotal,
-        deliveryType: this.selectedDeliveryType
-      }
+    })
 
-      await purchase(purchaseInfo, userState.uid).then((result) => {
-        let router = this.$router
-        let store = this.$store
-        let self = this
+    const purchaseItems = async () => {
+      showDialog.value = true
+      dialogMessage.value = "Hang on, processing your purchase ..."
+      cartItems.value = cartItems.value.map(item => ({...item, rating: null, review: null}))
+      const userState = JSON.parse(store.getters["uState/getUserState"])
+
+      let purchaseInfo = {
+        cartItems: cartItems.value,
+        grandTotal: calculateGrandTotal.value,
+        deliveryType: selectedDeliveryType.value
+      }
+      purchase(purchaseInfo, userState.uid).then((result) => {
         if(result.success){
-          setTimeout(async function(){
-            await store.dispatch("uCart/clearCart")
-            self.cartItems = []
-            self.showDialog = false
+          setTimeout(() => {
+            store.dispatch("uCart/clearCart")
+            cartItems.value = []
+            showDialog.value = false
             router.push("/purchase")
           }, 2000)
         }else{
           console.log(result.message)
         }
       })
-    },
+    }
+
+    onMounted(() => {
+      cartItems.value = store.getters["uCart/getUserCart"]
+    })
+
+    return {showDialog, dialogMessage, cartItems, selectedDeliveryType, deliveryType, cartTotalPrice, calculateGrandTotal, purchaseItems}
   }
 }
 </script>

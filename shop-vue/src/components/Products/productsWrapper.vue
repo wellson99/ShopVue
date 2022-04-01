@@ -40,7 +40,7 @@
     
     <product-card :products="paginatedProductsList" :snackbarProp="snackBar" v-on:addToCart="toogleSnackbar($event)" />
     <v-row class="mx-2 py-6 align-center justify-center">
-      <v-pagination v-model="page" :length="pages" @input="updatePage"/>
+      <v-pagination v-model="currentPage" :length="pages" @input="updatePage"/>
     </v-row>
 
     <snack-bar :show.sync="snackBar.show" :timeout.sync="snackBar.timeout" :color.sync="snackBar.color" :message.sync="snackBar.message" />
@@ -48,6 +48,7 @@
 </template>
 
 <script>
+import {computed, onMounted, reactive, ref} from '@vue/composition-api'
 import snackBar from "../Reuseable/snackbar.vue"
 import productCard from "./productCard.vue"
 
@@ -59,99 +60,93 @@ export default {
   props: {
     productsProp: {type: Array, required: true},
   },
-  data(){
-    return{
-      products: [],
-      page: 1,
-      itemsPerPage: 8,
-      listCount: 0,
-      paginatedProductsList: [],
-      pageFirstProduct: 0,
-      pageLastProduct: 0,
-      sortType: null,
-      itemsCount: [4, 8 ,16],
-      sortOptions: [
-        {type: "PriceDesc", title: "Price", description: "(Highest to Lowest)"},
-        {type: "PriceAsc", title: "Price", description: "(Lowest to Highest)"},
-        {type: "ReviewDesc", title: "Review", description: "(Best to Worst)"},
-        {type: "ReviewAsc", title: "Review", description: "(Worst to Best)"}
-      ],
-      snackBar: {
-        show: false,
-        color: "",
-        message: "",
-        timeout: null,
-      },
+  setup(props){
+    const products = ref([])
+    const currentPage = ref(1)
+    const itemsPerPage = ref(8)
+    const listCount = ref(0)
+    const paginatedProductsList = ref([])
+    const pageFirstProduct = ref(8)
+    const pageLastProduct = ref(8)
+    const sortType = ref(null)
+    const itemsCount = reactive([4, 8, 16])
+    const sortOptions = reactive([
+      {type: "PriceDesc", title: "Price", description: "(Highest to Lowest)"},
+      {type: "PriceAsc", title: "Price", description: "(Lowest to Highest)"},
+      {type: "ReviewDesc", title: "Review", description: "(Best to Worst)"},
+      {type: "ReviewAsc", title: "Review", description: "(Worst to Best)"}
+    ])
+    const snackBar = ref({show: false, color: null, message: null, timeout: null})
+
+    const pages = computed(() => {
+      if(listCount.value == null)  return 0
+      return Math.ceil(listCount.value / itemsPerPage.value)
+    })
+
+    const toogleSnackbar = (value) => {
+      snackBar.value = value
     }
-  },
-  mounted(){
-    this.products = this.productsProp
-    this.initPage(this.products)
-    this.updatePage(this.page)
-  },
-  computed: {
-    pages(){
-      if(this.listCount == null)  return 0
-      return Math.ceil(this.listCount / this.itemsPerPage)
+    const initPage = (list) => {
+      listCount.value = list.length
+      listCount.value < itemsPerPage.value
+        ?paginatedProductsList.value = list
+        :paginatedProductsList.value = list.slice(0, itemsPerPage.value)
     }
-  },
-  methods:{
-    initPage(list){
-      this.listCount = list.length
-      if(this.listCount < this.itemsPerPage){
-        this.paginatedProductsList = list
-      }else{
-        this.paginatedProductsList = list.slice(0, this.itemsPerPage)
-      }
-    },
-    updatePage(index){
-      let start = (index - 1) * this.itemsPerPage
-      let end = index * this.itemsPerPage
-      this.pageFirstProduct = start + 1
-      index === (Math.floor(this.listCount/this.itemsPerPage) + 1)
-        ?this.pageLastProduct = end - (this.products.length % this.itemsPerPage)
-        :this.pageLastProduct = end
-      this.paginatedProductsList = this.products.slice(start, end)
-      this.page = index
+    const updatePage = (index) => {
+      let start = (index - 1) * itemsPerPage.value
+      let end = index * itemsPerPage.value
+      pageFirstProduct.value = start + 1
+      index === (Math.floor(listCount.value / itemsPerPage.value) + 1)
+        ?pageLastProduct.value = end - (products.value.length % itemsPerPage.value)
+        :pageLastProduct.value = end
+      paginatedProductsList.value = products.value.slice(start, end)
+      currentPage.value = index
       window.scrollTo(0,0);
-    },
-    setItemsPerPage(itemsCount){
-      this.itemsPerPage = itemsCount
-      this.page = 1
-      this.initPage(this.products)
-      this.updatePage(this.page)
-    },
-    sortReviews(sortBy){
+    }
+    const setItemsPerPage = (itemsCount) => {
+      itemsPerPage.value = itemsCount
+      currentPage.value = 1
+      initPage(products.value)
+      updatePage(currentPage.value)
+    }
+    const sortReviews = (sortBy) => {
       switch(sortBy){
         case "PriceDesc":
-          this.products.sort((a, b) => b.prodPrice - a.prodPrice)
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.products)
+          products.value.sort((a, b) => b.prodPrice - a.prodPrice)
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(products.value)
           break
         case "PriceAsc":
-          this.products.sort((a, b) => a.prodPrice - b.prodPrice)
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.products)
+          products.value.sort((a, b) => a.prodPrice - b.prodPrice)
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(products.value)
           break
         case "ReviewDesc":
-          this.products.sort((a, b) => b.prodRating - a.prodRating)
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.products)
+          products.value.sort((a, b) => b.prodRating - a.prodRating)
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(products.value)
           break
         case "ReviewAsc":
-          this.products.sort((a, b) => a.prodRating - b.prodRating)
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.products)
+          products.value.sort((a, b) => a.prodRating - b.prodRating)
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(products.value)
           break
       }
-    },
-    toogleSnackbar(snackBar){
-      this.snackBar = snackBar
-    },
+    }
+
+    onMounted(() => {
+      products.value = props.productsProp
+      initPage(products.value)
+      updatePage(currentPage.value)
+    })
+
+    return {products, currentPage, itemsPerPage, listCount, paginatedProductsList, pageFirstProduct, pageLastProduct,
+      sortType, itemsCount, sortOptions, snackBar, pages, toogleSnackbar, initPage, updatePage, setItemsPerPage, sortReviews
+    }
   }
 }
 </script>

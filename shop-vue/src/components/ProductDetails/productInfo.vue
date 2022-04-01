@@ -85,7 +85,8 @@
 </template>
 
 <script>
-/* eslint-disable */
+import store from "@/store/index"
+import {onMounted, ref} from '@vue/composition-api'
 import {wishlistProduct, removeWishlist} from "../../../firebase/functions/product"
 export default {
   name: "productInfo",
@@ -94,121 +95,103 @@ export default {
     productWishlist: {type: Array, required: true}, 
     snackBarProp: {type: Object, required: true}
   },
-  data(){
-    return{
-      cartItems: [],
-      isWishlist: null,
-      wishlistID: null,
-      product: {
-        sellerID: "",
-        productID: "",
-        name: "",
-        category: "",
-        description: "",
-        imgURL: "",
-        price: 0,
-        quantity: 0,
-        sold: 0,
-        reviews: 0,
-        rating: 0,
-        itemQuantity: 1,
-      },
-      snackBar: {
-        show: this.snackBarProp.show,
-        timeout: this.snackBarProp.timeout,
-        color: this.snackBarProp.color,
-        message: this.snackBarProp.message
-      }
-    }
-  },
-  mounted(){
-    this.productInfo.map((info) => {
-      this.product.sellerID = info.sID
-      this.product.productID = info.id
-      this.product.name = info.prodName
-      this.product.category = info.prodCategory
-      this.product.imgURL = info.prodImgURL
-      this.product.description = info.prodDescription
-      this.product.price = info.prodPrice
-      this.product.quantity = info.prodQuantity
-      this.product.sold = info.prodSold
-      this.product.reviews = info.prodReviews
-      this.product.rating = info.prodRating
+  setup(props, {emit}){
+    const cartItems = ref([])
+    const isWishlist = ref(null)
+    const wishlistID = ref(null)
+    const product = ref({
+      sellerID: null, productID: null, name: null, category: null, description: null, imgURL: null,
+        price: 0, quantity: 0, sold: 0, reviews: 0, rating: 0, itemQuantity: 1
     })
+    const snackBar = ref(props.snackBarProp)
+    const userState = JSON.parse(store.getters["uState/getUserState"])
 
-    if(this.productWishlist.length === 1){
-      this.isWishlist = true
-      this.wishlistID = this.productWishlist[0].id
-    }else{
-      this.isWishlist = false
-    }
-  },
-  methods:{
-    itemCountIncrement(){
-      this.product.itemQuantity++
-    },
-    itemCountDecrement(){
-      this.product.itemQuantity--
-    },
-    async addToWishlists(){
-      const userState = JSON.parse(this.$store.getters["uState/getUserState"])
-      await wishlistProduct(this.product.productID, userState.uid).then((result) => {
-        if(result.success){
-          this.wishlistID = result.id
-          this.isWishlist = true
-          this.snackBar.show = true
-          this.snackBar.timeout = 1000
-          this.snackBar.color = "primary"
-          this.snackBar.message = "Item added into your wishlist."
-          this.$emit("addToWishlists", this.snackBar)
-        }else{
-          console.log(result.message)
-        }
-      })
-    },
-    async removeFromWishlists(){
-      const userState = JSON.parse(this.$store.getters["uState/getUserState"])
-      await removeWishlist(this.wishlistID, userState.uid).then((result) => {
-        if(result.success){
-          this.wishlistID = null
-          this.isWishlist = false
-          this.snackBar.show = true
-          this.snackBar.timeout = 1000
-          this.snackBar.color = "red"
-          this.snackBar.message = "Item removed into your wishlist."
-          this.$emit("removeFromWishlists", this.snackBar)
-        }else{
-          console.log(result.message)
-        }
-      })
-    },
-    addToCart(){
-      this.snackBar.show = true
-      this.snackBar.timeout = 1000
-      this.snackBar.color = "primary"
-      this.snackBar.message = "Item successfully added into your shopping cart."
-      this.$emit("addToWishlists", this.snackBar)
-      let newnum = this.product.itemQuantity
-      this.cartItems = this.$store.getters["uCart/getUserCart"]
-      let index = this.cartItems.findIndex( el => el.productID === this.product.productID )
+    const itemCountIncrement = () => product.value.itemQuantity++
+    const itemCountDecrement = () => product.value.itemQuantity--
+    const addToCart = () => {
+      snackBar.value.show = true
+      snackBar.value.timeout = 1000
+      snackBar.value.color = "primary"
+      snackBar.value.message = "Item successfully added into your shopping cart."
+      emit("addToWishlists", snackBar.value)
+      let newnum = product.value.itemQuantity
+      cartItems.value = store.getters["uCart/getUserCart"]
+      let index = cartItems.value.findIndex(item => item.productID === product.value.productID)
       if(index !== -1){
-        let updatedQuantity = this.cartItems[index].itemQuantity += newnum
-        this.$store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: updatedQuantity})
+        let updatedQuantity = cartItems[index].value.itemQuantity += newnum
+        store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: updatedQuantity})
       }else{
-        console.log("else ",this.product.itemQuantity)
-        this.$store.dispatch("uCart/addProductToCart", {product: {
-          sellerID: this.product.sellerID,
-          productID: this.product.productID,
-          name: this.product.name,
-          category: this.product.category,
-          imgURL: this.product.imgURL,
-          price: this.product.price,
+        console.log("else ", product.value.itemQuantity)
+        store.dispatch("uCart/addProductToCart", {product: {
+          sellerID: product.value.sellerID,
+          productID: product.value.productID,
+          name: product.value.name,
+          category: product.value.category,
+          imgURL: product.value.imgURL,
+          price: product.value.price,
           itemQuantity: newnum
         }})
       }
-      this.product.itemQuantity = 1
-      this.$emit("addToCart", this.snackBar)
-    },
+      product.value.itemQuantity = 1
+      emit("addToCart", snackBar.value)
+    }
+    const addToWishlists = async () => {
+      wishlistProduct(product.value.productID, userState.uid).then((result) => {
+        if(result.success){
+          wishlistID.value = result.id
+          isWishlist.value = true
+          snackBar.value.show = true
+          snackBar.value.timeout = 1000
+          snackBar.value.color = "primary"
+          snackBar.value.message = "Item added into your wishlist."
+          emit("addToWishlists", snackBar.value)
+        }else{
+          console.log(result.message)
+        }
+      })
+    }
+    const removeFromWishlists = async () => {
+      removeWishlist(wishlistID.value, userState.uid).then((result) => {
+        if(result.success){
+          wishlistID.value = null
+          isWishlist.value = false
+          snackBar.value.show = true
+          snackBar.value.timeout = 1000
+          snackBar.value.color = "red"
+          snackBar.value.message = "Item removed into your wishlist."
+          emit("removeFromWishlists", snackBar.value)
+        }else{
+          console.log(result.message)
+        }
+      })
+    }
+
+    onMounted(() => {
+      props.productInfo.map((info) => {
+        product.value.sellerID = info.sID
+        product.value.productID = info.id
+        product.value.name = info.prodName
+        product.value.category = info.prodCategory
+        product.value.imgURL = info.prodImgURL
+        product.value.description = info.prodDescription
+        product.value.price = info.prodPrice
+        product.value.quantity = info.prodQuantity
+        product.value.sold = info.prodSold
+        product.value.reviews = info.prodReviews
+        product.value.rating = info.prodRating
+      })
+
+      if(props.productWishlist.length === 1){
+        isWishlist.value = true
+        wishlistID.value = props.productWishlist[0].id
+      }else{
+        isWishlist.value = false
+      }
+    })
+
+    return {
+      cartItems, isWishlist, wishlistID, product, snackBar, addToWishlists, removeFromWishlists, itemCountIncrement, itemCountDecrement, addToCart
+    }
   }
 }
 </script>

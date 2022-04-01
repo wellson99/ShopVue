@@ -22,7 +22,12 @@ async function signUpUser(signupDetails){
       let userDetails = await getProfile(cred.user.uid)
       result = {success: true, uid: cred.user.uid, userDetails: userDetails}
     }).catch((error) => result =  {success: false, message: error.message})
-  }).catch((error) => result =  {success: false, message: error.message})
+  }).catch((error) => {
+    result =  {
+      success: false, 
+      message: error.message, 
+      display: "Failed to sign up account. Make sure you don't leave any section emptu and entered valid Email and Password."}
+  })
 
   return result
 }
@@ -37,7 +42,9 @@ async function signInUser(signinDetails){
       let userDetails = await getProfile(cred.user.uid)
       result = {success: true, uid: cred.user.uid, userDetails: userDetails}
     }).catch((error) => result =  {success: false, message: error.message})
-  }).catch((error) => result =  {success: false, message: error.message})
+  }).catch((error) => {
+    result =  {success: false, message: error.message, display: "Failed to sign in to the account. Make sure you entered the correct Email and Password."}
+  })
 
   return result
 }

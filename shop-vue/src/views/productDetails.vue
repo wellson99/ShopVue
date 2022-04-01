@@ -14,6 +14,9 @@
 </template>
 
 <script>
+import store from "@/store/index"
+import router from "@/router/index"
+import {onMounted, ref} from '@vue/composition-api'
 import {getSingleProduct, getWishlists} from "../../firebase/functions/product"
 import {getProductReviews} from "../../firebase/functions/review"
 import snackBar from "../components/Reuseable/snackbar.vue"
@@ -26,41 +29,40 @@ export default {
   components:{
     snackBar, loadingDialog, productReview, productInfo, pageHeader
   },
-  data(){
-    return{
-      headerTitle: "Product Details",
-      headerDesc: "Displaying all the details for the product.",
-      pageLoading: true,
-      loadingDialog: true,
-      loadingMessage: "Hang on, fetching data ...",
-      productInfo: [],
-      wishlist: [],
-      productReviews: [],
-      snackBar: {
-        show: false,
-        color: "",
-        message: "",
-        timeout: null,
-      }
-    }
-  },
-  async mounted(){
-    const userState = JSON.parse(this.$store.getters["uState/getUserState"])
-    const [prodInfo, prodReview, prodWishlist] = await Promise.all([
-      getSingleProduct(this.$route.params.productID),
-      getProductReviews(this.$route.params.productID),
-      getWishlists(userState.uid, this.$route.params.productID)
-    ])
+  setup(){
+    const headerTitle = ref("Product Details")
+    const headerDesc = ref("Displaying all the details for the product.")
+    const pageLoading = ref(true)
+    const loadingDialog = ref(true)
+    const loadingMessage = ref("Hang on, fetching data ...")
+    const productInfo = ref([])
+    const wishlist = ref([])
+    const productReviews = ref([])
+    const snackBar = ref({show: false, color: null, message: null, timeout: null})
 
-    this.productInfo = prodInfo
-    this.productReviews = prodReview
-    this.wishlist = prodWishlist
-    setTimeout(() => this.pageLoading = false, 1000)
-  },
-  methods: {
-    toggleSnackbar(snackBar){
-      this.snackBar = snackBar
-    },
+    const toggleSnackbar = (eventVal) => {
+      snackBar.value = eventVal
+    }
+
+    onMounted(async () => {
+      const route = router.app.$route.params
+      const userState = JSON.parse(store.getters["uState/getUserState"])
+      const [prodInfo, prodReview, prodWishlist] = await Promise.all([
+        getSingleProduct(route.productID),
+        getProductReviews(route.productID),
+        getWishlists(userState.uid, route.productID)
+      ])
+
+      productInfo.value = prodInfo
+      productReviews.value = prodReview
+      wishlist.value = prodWishlist
+      setTimeout(() => {
+        pageLoading.value = false
+        loadingDialog.value = false
+      }, 1000)
+    })
+
+    return {headerTitle, headerDesc, pageLoading, loadingDialog, loadingMessage, productInfo, wishlist, productReviews, snackBar, toggleSnackbar}
   }
 }
 </script>

@@ -32,6 +32,7 @@
 </template>
 
 <script>
+import { ref } from '@vue/composition-api'
 import signInForm from "../components/Authentication/signIn.vue"
 import signUpForm from "../components/Authentication/signUp.vue"
 import loadingDialog from "../components/Reuseable/loadingDialog.vue"
@@ -40,25 +41,18 @@ export default {
   components:{
     loadingDialog, signInForm, signUpForm
   },
-  data(){
-    return{
-      isSignUp: false,
-      dialog: {
-        show: false,
-        message: null,
-      },
+  setup(){
+    const isSignUp = ref(false)
+    const dialog = ref({show: false, message: null})
+
+    const changeForm = (value) => {
+      isSignUp.value = value
     }
-  },
-  mounted(){
-    console.log("store ",this.$store.getters["uState/getUserState"])
-  },
-  methods: {
-    changeForm(value){
-      this.isSignUp = value
-    },
-    toggleDialog(dialog){
-      this.dialog = dialog
-    },
+    const toggleDialog = (event) => {
+      dialog.value = event
+    }
+
+    return {isSignUp, dialog, changeForm, toggleDialog}
   }
 }
 </script>

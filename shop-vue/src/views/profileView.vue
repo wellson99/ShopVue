@@ -32,13 +32,13 @@
               </v-row>
 
               <v-col class="text-center">
-                <v-btn color="primary" large width="50%" @click.prevent="dialog = true">
+                <v-btn color="primary" large width="50%" @click.prevent="updateDialog = true">
                   <v-icon left>mdi-file-edit</v-icon>
                   Edit Profile
                 </v-btn>
               </v-col>
                 
-              <v-dialog v-model="dialog" scrollable width="50%">
+              <v-dialog v-model="updateDialog" scrollable width="50%">
                 <v-card>
                   <v-card-title class="primary">
                     <span class="white--text">Edit Profile</span>
@@ -77,7 +77,7 @@
 
                     <v-row>
                       <v-col class="text-center mt-5">
-                        <v-btn color="primary" large width="50%" @click.prevent="updateProfile()">
+                        <v-btn color="primary" large width="50%" @click.prevent="updateUserProfile()">
                           <v-icon left>mdi-file-edit</v-icon>
                           Update Profile
                         </v-btn>
@@ -85,7 +85,7 @@
                     </v-row>
                   </v-card-text>
                 </v-card>
-                <loading-dialog :show.sync="showDialog" :message.sync="dialogMessage" />
+                <loading-dialog :show.sync="loading.dialog" :message.sync="loading.message" />
               </v-dialog>
             </v-card-text>
           </v-card>
@@ -93,12 +93,14 @@
       </v-row>
     </template>
     
-    <snack-bar :show.sync="showSnackbar" :timeout.sync="snackbarTimeout" :color.sync="snackbarColor" :message.sync="snackbarMessage" />
-    <loading-dialog v-if="pageLoading" :show.sync="loadingDialog" :message.sync="loadingMessage" />
+    <snack-bar :show.sync="snackBar.show" :timeout.sync="snackBar.timeout" :color.sync="snackBar.color" :message.sync="snackBar.message" />
+    <loading-dialog v-if="pageLoading" :show.sync="loading.dialog" :message.sync="loading.message" />
   </v-container>
 </template>
 
 <script>
+import store from "@/store/index"
+import {computed, onMounted, ref} from '@vue/composition-api'
 import {getProfile, updateProfile} from "../../firebase/functions/profile"
 import snackBar from "../components/Reuseable/snackbar.vue"
 import loadingDialog from "../components/Reuseable/loadingDialog.vue"
@@ -108,113 +110,93 @@ export default {
   components:{
     snackBar, loadingDialog, pageHeader
   },
-  data(){
-    return{
-      headerTitle: "Profile",
-      headerDesc: "All of your profile info will display here here.",
-      pageLoading: false,
-      loadingDialog: true,
-      loadingMessage: "Hang on, fetching data ...",
-      showDialog: false,
-      dialogMessage: "",  
-      showSnackbar: false,
-      snackbarColor: "",
-      snackbarMessage: "",
-      snackbarTimeout: null,
-      profileInfo: [],
-      dialog: false,
-      file: null,
-      profile:{
-        id: null,
-        email: null,
-        firstName: null,
-        lastName: null,
-        createdAt: null,
-        imgURL: null
-      }
-    }
-  },
-  async mounted(){
-    let self = this
-    this.pageLoading = true
-    const userState = JSON.parse(this.$store.getters["uState/getUserState"])
-    this.profileInfo = await getProfile(userState.uid)
-    // console.log(JSON.stringify(this.profileInfo))
-    this.profileInfo.map(profile => {
-      this.profile.id = profile.id
-      this.profile.email = profile.userEmail,
-      this.profile.firstName = profile.firstName,
-      this.profile.lastName = profile.lastName
-      this.profile.createdAt = profile.createdAt
-      this.profile.imgURL = profile.imgURL
-    })
+  setup(){
+    const headerTitle = ref("Profile")
+    const headerDesc = ref("All of your profile info will display here here.")
+    const pageLoading = ref(true)
+    const loading = ref({dialog: true, message: "Hang on, fetching data ..."})
+    const snackBar = ref({show: false, color: null, message:null, timeout: null})
+    const profileInfo = ref([])
+    const updateDialog = ref(false)
+    const file = ref(null)
+    const profile = ref({id: null, email: null, firstName: null, lastName: null, createdAt: null, imgURL: null})
+    const userState = JSON.parse(store.getters["uState/getUserState"])
 
-    setTimeout(function(){
-      self.pageLoading = false
-    }, 1500)
-  },
-  computed:{
-    userState(){
-      return JSON.parse(this.$store.getters["uState/getUserState"])
-    },
-    userFullName(){
-      return `${this.profile.firstName} ${this.profile.lastName}`
-    },
-    userInitials(){
-      return `${String(this.profile.firstName).charAt(0)}${String(this.profile.lastName).charAt(0)}`
-    },
-    createdAtDateTime(){  
-      if(this.profile.createdAt === null) return ""
-      let dateObj = new Date(this.profile.createdAt.seconds * 1000) 
+    const userFullName = computed(() => {
+      return `${profile.value.firstName} ${profile.value.lastName}`
+    })
+    const userInitials = computed(() => {
+      return `${String(profile.value.firstName).charAt(0)}${String(profile.value.lastName).charAt(0)}`
+    })
+    const createdAtDateTime = computed(() => {
+      if(profile.value.createdAt === null) return ""
+      let dateObj = new Date(profile.value.createdAt.seconds * 1000) 
       var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
       var time = dateObj.toLocaleString(undefined, {hour12:true, hour:"numeric", minute:"numeric"})
       return `${date} at ${time}`
-    },
-  },
-  methods:{
-    async updateProfile(){
-      this.showDialog = true
-      this.dialogMessage = "Hang on, updating your profile ..."
+    })
+
+    const updateUserProfile = async () => {
+      loading.value.dialog = true
+      loading.value.message = "Hang on, updating your profile ..."
+
       let profileInfo = {
-        id: this.profile.id,
-        firstName: this.profile.firstName,
-        lastName: this.profile.lastName
+        id: profile.value.id,
+        firstName: profile.value.firstName,
+        lastName: profile.value.lastName
       }
-
-      await updateProfile(this.file, profileInfo).then((result) => {
-        let self = this
+      await updateProfile(file.value, profileInfo).then((result) => {
         if(result.success){
-          if("imgURL" in result) this.profile.imgURL = result.imgURL
-          this.profile.firstName = result.firstName
-          this.profile.lastName = result.lastName
+          if("imgURL" in result) profile.value.imgURL = result.imgURL
+          profile.value.firstName = result.firstName
+          profile.value.lastName = result.lastName
           localStorage.setItem("uState", JSON.stringify({
-            uid: this.profile.id,
-            email: this.profile.email,
-            imgURL: this.profile.imgURL,
-            fName: this.profile.firstName,
-            lName: this.profile.lastName
+            uid: profile.value.id,
+            email: profile.value.email,
+            imgURL: profile.value.imgURL,
+            fName: profile.value.firstName,
+            lName: profile.value.lastName
           }))
-          this.$store.dispatch("uState/setUserState")
+          store.dispatch("uState/setUserState")
 
-          setTimeout(function(){
-            self.showDialog = false
-            self.dialog = false 
-            self.showSnackbar = true
-            self.snackbarTimeout = 1000
-            self.snackbarColor = "primary"
-            self.snackbarMessage = "Profile info updated successfully."
-            self.file = null
-          }, 2000)
+          setTimeout(() => {
+            loading.value.dialog = false
+            updateDialog.value = false 
+            snackBar.value.show = true
+            snackBar.value.timeout = 1000
+            snackBar.value.color = "primary"
+            snackBar.value.message = "Profile info updated successfully."
+            file.value = null
+          }, 1000)
         }else{
           setTimeout(function(){
-            self.showDialog = false
-            self.dialog = false 
+            loading.value.dialog = false
+            updateDialog.value = false 
             console.log(result.message)
-            this.file = null
-          }, 2000)
+            file.value = null
+          }, 1000)
         }
       })
-    },
+    }
+
+    onMounted(async () => {
+      pageLoading.value = true      
+      profileInfo.value = await getProfile(userState.uid)
+      profileInfo.value.map(info => {
+        profile.value.id = info.id
+        profile.value.email = info.userEmail,
+        profile.value.firstName = info.firstName,
+        profile.value.lastName = info.lastName
+        profile.value.createdAt = info.createdAt
+        profile.value.imgURL = info.imgURL
+      })
+      setTimeout(() => {
+        pageLoading.value = false
+        loading.value.dialog = false
+      }, 1500)
+    })
+
+    return {headerTitle, headerDesc, pageLoading, loading, snackBar, profileInfo, updateDialog, file, profile, userState, userInitials, userFullName, createdAtDateTime, updateUserProfile}
   }
 }
 </script>

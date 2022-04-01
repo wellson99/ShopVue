@@ -51,24 +51,30 @@
 
             <v-list>
               <v-list-item>
-                <v-btn text color="primary" width="100%" @click.prevent="changeRoute('/profile')">
-                  <v-icon left>mdi-account</v-icon>
-                  Profile
-                </v-btn>
+                <!-- <router-link :to="{name: 'profile'}"> -->
+                  <v-btn text color="primary" width="100%" @click.prevent="changeRoute('/profile')">
+                    <v-icon left>mdi-account</v-icon>
+                    Profile
+                  </v-btn>
+                <!-- </router-link> -->
               </v-list-item>
 
               <v-list-item>
-                <v-btn text color="primary" width="100%" @click.prevent="changeRoute('/purchase')">
-                  <v-icon left>mdi-cash-check</v-icon>
-                  Purchases
-                </v-btn>
+                <!-- <router-link :to="{name: 'profile'}"> -->
+                  <v-btn text color="primary" width="100%" @click.prevent="changeRoute('/purchase')">
+                    <v-icon left>mdi-cash-check</v-icon>
+                    Purchases
+                  </v-btn>
+                <!-- </router-link> -->
               </v-list-item>
 
               <v-list-item>
-                <v-btn text color="primary" width="100%" @click.prevent="signOut()">
-                  <v-icon left>mdi-logout</v-icon>
-                  Logout
-                </v-btn>
+                <!-- <router-link @click="signOut()"> -->
+                  <v-btn text color="primary" width="100%" @click.prevent="signOut()">
+                    <v-icon left>mdi-logout</v-icon>
+                    Logout
+                  </v-btn>
+                <!-- </router-link> -->
               </v-list-item>
             </v-list>
           </v-menu>
@@ -81,69 +87,65 @@
 </template>
 
 <script>
-/* eslint-disable */
+import store from "@/store/index"
+import router from "@/router/index"
+import {computed, ref} from '@vue/composition-api'
 import {signOutUser} from "../../firebase/functions/authentication"
 import loadingDialog from "../components/Reuseable/loadingDialog.vue"
-// const isAuth = await userState()
 
 export default {
   name: "NavBar",
   components:{
     loadingDialog
   },
-  data() {
-    return{
-      cart: [],
-      itemsInCart: null,
-      showDialog: false,
-      dialogMessage: "",
-    }
-  },
-  computed:{
-    userState(){
-      if("uState" in localStorage) this.$store.dispatch("uState/setUserState")
-      // console.log(this.$store.getters["uState/getUserState"])
-      return this.$store.getters["uState/getUserState"]
-    },
-    userCart(){
+  setup(){
+    const showDialog = ref(false)
+    const dialogMessage = ref(null)
+
+    const userState = computed(() => {
+      if("uState" in localStorage) store.dispatch("uState/setUserState")
+      return store.getters["uState/getUserState"]
+    })
+    const userCart = computed(() => {
       // if("uCart" in localStorage) this.$store.dispatch("uCart/addProductToCart")
-      return this.$store.getters["uCart/getUserCartLength"]
-    },
-    userFullName(){
-      const userState = JSON.parse(this.userState)
-      return `${userState.fName} ${userState.lName}`
-    },
-    userProfilePic(){
-      const userState = JSON.parse(this.userState)
-      return userState.imgURL
-    },
-    userInitials(){
-      const userState = JSON.parse(this.userState)
-      let firstNameInitial = userState.fName.charAt(0)
-      let lastNameInitial = userState.lName.charAt(0)
+      return store.getters["uCart/getUserCartLength"]
+    })
+    const userFullName = computed(() => {
+      const uState = JSON.parse(userState.value)
+      return `${uState.fName} ${uState.lName}`
+    })
+    const userProfilePic = computed(() => {
+      const uState = JSON.parse(userState.value)
+      return uState.imgURL
+    })
+    const userInitials = computed(() => {
+      const uState = JSON.parse(userState.value)
+      let firstNameInitial = uState.fName.charAt(0)
+      let lastNameInitial = uState.lName.charAt(0)
       return `${firstNameInitial}${lastNameInitial}`
-    }
-  },
-  methods: {
-    async signOut(){
-      this.showDialog = true
-      this.dialogMessage = "Hang on, signing you out ..."
-      const userState = JSON.parse(this.userState)
-      await signOutUser(userState.uid).then((result) => {
+    })
+
+    const signOut = async () => {
+      showDialog.value = true
+      dialogMessage.value = "Hang on, signing you out ..."
+      const uState = JSON.parse(userState.value)
+      await signOutUser(uState.uid).then((result) => {
         if(result.success){
-          this.$store.dispatch("uState/clearUserState")
-          this.$store.dispatch("uCart/clearCart")
-          this.$router.push("/signup")
-          this.showDialog = false
+          store.dispatch("uState/clearUserState")
+          store.dispatch("uCart/clearCart")
+          router.push("/signup")
+          showDialog.value = false
         }else{
-          this.showDialog = false
+          showDialog.value = false
           console.log(result.message)
         }
       })
-    },
-    changeRoute(route){
-      this.$router.push(route)
     }
+    const changeRoute = (selectedRoute) => {
+      router.push(selectedRoute)
+    }
+
+    return {showDialog, dialogMessage, userState, userCart, userFullName, userProfilePic, userInitials, signOut, changeRoute}
   }
 }
 </script>

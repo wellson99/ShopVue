@@ -83,10 +83,12 @@
                       </v-alert>
                     </v-row>
                     <v-row align="center" class="my-1">
-                      <v-btn color="primary" width="50%" @click.prevent="reviewProduct(purchase.id, index)">
-                        <v-icon left>mdi-file-edit</v-icon>
-                        Review Product
-                      </v-btn>
+                      <router-link :to="{path:`/purchase/${purchase.id}/review/${product.productID}/${index}`}" >
+                        <v-btn color="primary"> 
+                          <v-icon left>mdi-file-edit</v-icon>
+                            Review Product
+                        </v-btn>
+                      </router-link>
                     </v-row>
                   </v-col>
                 </template>
@@ -100,41 +102,35 @@
 </template>
 
 <script>
+import {ref} from '@vue/composition-api'
+
 export default {
   name: "purchaseDialog",
   props: {
     purchaseProp: {type: Object, required: true},
   },
-  data(){
-    return{
-      purchase: {
-        dialog: this.purchaseProp.dialog,
-        id: this.purchaseProp.id,
-        time: this.purchaseProp.time,
-        total: this.purchaseProp.total,
-        delivery: this.purchaseProp.delivery.show,
-        items: this.purchaseProp.items
-      },
+  setup(props, {emit}){
+    const purchase = ref({
+      dialog: props.purchaseProp.dialog,
+      id: props.purchaseProp.id, 
+      time: props.purchaseProp.time, 
+      total: props.purchaseProp.total, 
+      delivery: props.purchaseProp.delivery.show, 
+      items: props.purchaseProp.items
+    })
+
+    const closeDialog = () => {
+      purchase.value.dialog = false
+      emit("closeDialog", purchase.value)
     }
-  },
-  methods:{
-    closeDialog(){
-      this.purchase.dialog = false
-      this.$emit("closeDialog", this.purchase)
-    },
-    purchaseDateTime(timestampObj){  
+    const purchaseDateTime = (timestampObj) => {
       let dateObj = new Date(timestampObj.seconds * 1000) 
       var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
       var time = dateObj.toLocaleString(undefined, {hour12:true, hour:"numeric", minute:"numeric"})
       return `${date} - ${time}`
-    },
-    reviewProduct(purchaseID, index){
-      console.log(index); console.log(purchaseID)
-      this.$router.push({
-        name: "review",
-        params: {purchaseID: purchaseID, index: index}
-      })
     }
+
+    return {purchase, closeDialog, purchaseDateTime}
   }
 }
 </script>
