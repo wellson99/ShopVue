@@ -31,7 +31,7 @@
           </v-col>
             
           <v-dialog v-model="item.dialog" scrollable width="50%">
-            <purchase-dialog :purchaseProp="item" :dialogProp="item.dialog" v-on:closeDialog="closeDialog($event)" />
+            <purchase-dialog :purchaseProp="item" :dialogProp="item.dialog" v-on:closeDialog="closeDialog($event, item)" />
           </v-dialog> 
         </v-card-text>
       </v-card>
@@ -40,6 +40,7 @@
 </template>
 
 <script>
+import {ref, set} from '@vue/composition-api'
 import PurchaseDialog from './purchaseDialog.vue'
 
 export default {
@@ -50,27 +51,41 @@ export default {
   props: {
     purchaseProp: {type: Array, required: true}
   },
-  data(){
-    return{
-      purchasedItems: this.purchaseProp,
-      purchase: {},
-    }
-  },
-  methods:{
-    openDialog(item){
-      this.$set(item, "dialog", true)
-      this.purchase = item
-    },
-    closeDialog(item){
-      // this.$set(item, "dialog", false)
-      this.purchase.dialog = item.dialog
-    },
-    purchaseDateTime(timestampObj){  
+  setup(props){
+    const purchasedItems = ref(props.purchaseProp)
+
+    const openDialog = (item) => set(item, "dialog", true)
+    const closeDialog = (eventVal, item) => set(item, "dialog", eventVal.dialog)
+    const purchaseDateTime = (timestampObj) => {
       let dateObj = new Date(timestampObj.seconds * 1000) 
       var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
       var time = dateObj.toLocaleString(undefined, {hour12:true, hour:"numeric", minute:"numeric"})
       return `${date} - ${time}`
-    },
+    }
+
+    return {purchasedItems, openDialog, closeDialog, purchaseDateTime}
   }
+  // data(){
+  //   return{
+  //     purchasedItems: this.purchaseProp,
+  //     purchase: {},
+  //   }
+  // },
+  // methods:{
+  //   openDialog(item){
+  //     this.$set(item, "dialog", true)
+  //     this.purchase = item
+  //   },
+  //   closeDialog(item){
+  //     // this.$set(item, "dialog", false)
+  //     this.purchase.dialog = item.dialog
+  //   },
+  //   purchaseDateTime(timestampObj){  
+  //     let dateObj = new Date(timestampObj.seconds * 1000) 
+  //     var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
+  //     var time = dateObj.toLocaleString(undefined, {hour12:true, hour:"numeric", minute:"numeric"})
+  //     return `${date} - ${time}`
+  //   },
+  // }
 }
 </script>

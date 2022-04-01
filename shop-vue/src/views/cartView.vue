@@ -14,6 +14,7 @@
 </template>
 
 <script>
+import {onMounted, ref} from '@vue/composition-api'
 import cartSummary from '@/components/Cart/cartSummary.vue'
 import cartItems from "../components/Cart/cartItems.vue"
 import loadingDialog from "../components/Reuseable/loadingDialog.vue"
@@ -23,20 +24,21 @@ export default {
   components:{
     cartItems, cartSummary, loadingDialog, pageHeader
   },
-  data(){
-    return{
-      headerTitle: "Carts",
-      headerDesc: "All of your shopping items will display here here.",
-      pageLoading: true,
-      loadingDialog: true,
-      loadingMessage: "Hang on, fetching data ...",
-    }
-  },
-  mounted() {
-    setTimeout(() => {
-      this.pageLoading = false
-      this.loadingDialog = false
-    }, 500)
-  },
+  setup(){
+    const headerTitle = ref("Carts")
+    const headerDesc = ref("All of your shopping items will display here here.")
+    const pageLoading = ref(true)
+    const loadingDialog = ref(true)
+    const loadingMessage = ref("Hang on, fetching data ...")
+
+    onMounted(() => {
+      setTimeout(() => {
+        pageLoading.value = false
+        loadingDialog.value = false
+      }, 500)
+    })
+
+    return {headerTitle, headerDesc, pageLoading, loadingDialog, loadingMessage}
+  }
 }
 </script>

@@ -60,7 +60,7 @@
                 <v-divider class="my-5" />
               </div>
               <v-pagination
-                v-model="page" :length="pages" @input="updatePage"
+                v-model="currentPage" :length="pages" @input="updatePage"
               ></v-pagination>
             </div>
           </v-card-text>
@@ -71,82 +71,81 @@
 </template>
 
 <script>
+import {computed, onMounted, ref} from '@vue/composition-api'
+
 export default {
   name: "productReview",
   props:{
     productReviews: {type: Array, required: true}
   },
-  data(){
-    return{
-      page: 1,
-      pageSize: 4,
-      listCount: 0,
-      paginatedReviewsList: [],
-      reviews: [],
-      sortType: "DateDesc",
+  setup(props){
+    const currentPage = ref(1) 
+    const itemsPerPage = ref(4) 
+    const listCount = ref(0) 
+    const paginatedReviewsList = ref([]) 
+    const reviews = ref([]) 
+    const sortType = ref("DateDesc") 
+
+    const pages = computed(() => {
+      if(listCount.value === null) return 0
+      return Math.ceil(listCount.value / itemsPerPage.value)
+    })
+
+    const initPage = (list) => {
+      listCount.value = list.length
+      listCount.value < itemsPerPage.value
+        ?paginatedReviewsList.value = list
+        :paginatedReviewsList.value = list.slice(0, itemsPerPage.value)
     }
-  },
-  mounted(){
-    this.reviews = this.productReviews
-    this.reviews.sort((a, b) => b.date - a.date)
-    this.initPage(this.reviews)
-    this.updatePage(this.page)
-  },
-  computed:{
-    pages(){
-      if(this.listCount === null) return 0
-      return Math.ceil(this.listCount / this.pageSize)
+    const updatePage = (index) => {
+      let start = (index - 1) * itemsPerPage.value
+      let end = index * itemsPerPage.value
+      paginatedReviewsList.value = reviews.value.slice(start, end)
+      currentPage.value = index
     }
-  },
-  methods:{
-    initPage(list){
-      this.listCount = list.length
-      if(this.listCount < this.pageSize){
-        this.paginatedReviewsList = list
-      }else{
-        this.paginatedReviewsList = list.slice(0, this.pageSize)
-      }
-    },
-    updatePage(index){
-      let start = (index - 1) * this.pageSize
-      let end = index * this.pageSize
-      this.paginatedReviewsList = this.reviews.slice(start, end)
-      this.page = index
-    },
-    reviewDateTime(timestampObj){  
+    const reviewDateTime = (timestampObj) => {
       let dateObj = new Date(timestampObj.seconds * 1000) 
       var date = dateObj.toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric"})
       var time = dateObj.toLocaleString(undefined, {hour12:false, hour:"numeric", minute:"numeric"})
       return `${date} at ${time}`
-    },
-    sortReviews(sortBy){
+    }
+    const sortReviews = (sortBy) => {
       switch(sortBy){
         case "DateDesc":
-          this.reviews.sort((a, b) => b.date.toDate() - a.date.toDate())
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.reviews)
+          reviews.value.sort((a, b) => b.date.toDate() - a.date.toDate())
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(reviews.value)
           break
         case "DateAsc":
-          this.reviews.sort((a, b) => a.date.toDate() - b.date.toDate())
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.reviews)
+          reviews.value.sort((a, b) => a.date.toDate() - b.date.toDate())
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(reviews.value)
           break
         case "ReviewDesc":
-          this.reviews.sort((a, b) => b.rating - a.rating)
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.reviews)
+          reviews.value.sort((a, b) => b.rating - a.rating)
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(reviews.value)
           break
         case "ReviewAsc":
-          this.reviews.sort((a, b) => a.rating - b.rating)
-          this.sortType = sortBy
-          this.page = 1
-          this.initPage(this.reviews)
+          reviews.value.sort((a, b) => a.rating - b.rating)
+          sortType.value = sortBy
+          currentPage.value = 1
+          initPage(reviews.value)
           break
       }
-    },
+    }
+
+    onMounted(() => {
+      reviews.value = props.productReviews
+      reviews.value.sort((a, b) => b.date - a.date)
+      initPage(reviews.value)
+      updatePage(currentPage.value)
+    })
+
+    return {currentPage, paginatedReviewsList, sortType, pages, reviewDateTime, updatePage, sortReviews}
   }
 }
 </script>

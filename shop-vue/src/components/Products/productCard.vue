@@ -4,7 +4,8 @@
       <v-col sm="12" md="6" lg="3" class="" v-for="product in products" :key="product.id">
         <v-card rounded="lg" color="" elevation="10" width="88%" class="my-2 mx-auto pointer">
           <!-- <div @click.prevent="changeRoute('productDetails', product.id)"> -->
-          <router-link :to="`product/${product.id}`" style="text-decoration: none; color: black;">
+          <!-- <router-link :to="`product/${product.id}`" style="text-decoration: none; color: black;"> -->
+          <router-link :to="{name: 'productDetails', params: {productID: product.id}}" style="text-decoration: none; color: black;">
             <v-img height="250" class="mx-3 mb-2" :src="product.prodImgURL" />
             <v-divider class="mx-4"/>
             <v-card-title>{{product.prodName}}</v-card-title>
@@ -37,43 +38,30 @@
 </template>
 
 <script>
+import store from "@/store/index"
+import {ref} from '@vue/composition-api'
+
 export default {
   name: "productCard",
   props: {
     products: {type: Array, required: true},
     snackbarProp: {type: Object, required: true}
   },
-  data(){
-    return{
-      snackBar: {
-        show: false,
-        color: "",
-        message: "",
-        timeout: null,
-      },
-    }
-  },
-  methods:{
-    changeRoute(route, productID){
-      this.$router.push({
-        name: route,
-        params: {productID: productID}
-      })
-    },
-    addToCart(product){
-      this.snackBar.show = true
-      this.snackBar.timeout = 1000
-      this.snackBar.color = "primary"
-      this.snackBar.message = "Item successfully added into your shopping cart."
-      // console.log("tapped ", JSON.stringify(product.id))
-      let cartItems = this.$store.getters["uCart/getUserCart"]
+  setup(props, {emit}){
+    const snackBar = ref(props.snackbarProp)
+
+    const addToCart = (product) => {
+      snackBar.value.show = true
+      snackBar.value.timeout = 1000
+      snackBar.value.color = "primary"
+      snackBar.value.message = "Item successfully added into your shopping cart."
+      let cartItems = store.getters["uCart/getUserCart"]
       let index = cartItems.findIndex(element => element.productID === product.id)
       if(index !== -1){
         let updatedQuantity = cartItems[index].itemQuantity += 1
-        this.$store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: updatedQuantity})
+        store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: updatedQuantity})
       }else{
-        // console.log("else ",this.product.itemQuantity)
-        this.$store.dispatch("uCart/addProductToCart", {product: {
+        store.dispatch("uCart/addProductToCart", {product: {
           sellerID: product.sID,
           productID: product.id,
           name: product.prodName,
@@ -83,8 +71,10 @@ export default {
           itemQuantity: 1
         }})
       }
-      this.$emit("addToCart", this.snackBar)
-    },
+      emit("addToCart", snackBar.value)
+    }
+
+    return {snackBar, addToCart}
   }
 }
 </script>

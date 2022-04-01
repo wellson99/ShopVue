@@ -21,14 +21,14 @@
               <span class="text-body-1 font-weight-medium">{{item.itemQuantity}}</span>
             </v-row>
             <v-row align="center" class="mt-4">
-              <span class="text-h6 font-weight-medium">Total: RM {{item.price * item.itemQuantity}}</span>
+              <span class="text-h6 font-weight-medium">Total: RM {{(item.price * item.itemQuantity).toFixed(2)}}</span>
             </v-row>
           </v-card-text>
         </div>
 
         <div v-show="!item.show" class="ma-4 ml-auto my-auto">
           <div class="d-flex align-center my-4">
-            <v-btn color="primary" width="100%" @click.prevent="updateMode(index, item)">
+            <v-btn color="primary" width="100%" @click.prevent="updateMode(item)">
               <v-icon left>mdi-file-edit</v-icon>
               Update
             </v-btn>
@@ -42,11 +42,11 @@
         </div>   
         
         <div v-show="item.show" class="ma-4 ml-auto my-auto">
-          <v-btn fab x-small :disabled="newItemQuantity <= 1" color="primary mx-2" @click.prevent="quantityDecrement(index)"> 
+          <v-btn fab x-small :disabled="item.newItemQuantity <= 1" color="primary mx-2" @click.prevent="quantityDecrement(item)"> 
             <v-icon dark>mdi-minus</v-icon>
           </v-btn>
-          <span class="mx-8 text-h5 font-weight-medium primary--text">{{newItemQuantity}}</span>
-          <v-btn fab x-small color="primary mx-2" @click.prevent="quantityIncrement(index)"> 
+          <span class="mx-8 text-h5 font-weight-medium primary--text">{{item.newItemQuantity}}</span>
+          <v-btn fab x-small color="primary mx-2" @click.prevent="quantityIncrement(item)"> 
             <v-icon dark>mdi-plus</v-icon>
           </v-btn>  
         </div>  
@@ -67,11 +67,13 @@
         </div>  
     </v-card>
 
-    <snack-bar :show.sync="showSnackbar" :timeout.sync="snackbarTimeout" :color.sync="snackbarColor" :message.sync="snackbarMessage" />
+    <snack-bar :show.sync="snackBar.show" :timeout.sync="snackBar.timeout" :color.sync="snackBar.color" :message.sync="snackBar.message" />
   </v-col>
 </template>
 
 <script>
+import {onMounted, ref, set} from '@vue/composition-api'
+import store from "@/store/index"
 import snackBar from "../Reuseable/snackbar.vue"
 
 export default {
@@ -79,51 +81,40 @@ export default {
   components: {
     snackBar,
   },
-  data(){
-    return{
-      cartItems: [],
-      newItemQuantity: 1,
-      showSnackbar: false,
-      snackbarColor: "",
-      snackbarMessage: "",
-      snackbarTimeout: null,
+  setup(){
+    const cartItems = ref([])
+    const snackBar = ref({show: false, color: null, message: null, timeout: null})
+
+    const quantityIncrement = (item) => item.newItemQuantity++
+    const quantityDecrement = (item) => item.newItemQuantity--
+    const updateMode = (item) => {
+      set(item, "show", true)
+      set(item, "newItemQuantity", item.itemQuantity)
     }
-  },
-  mounted(){
-    this.cartItems = this.$store.getters["uCart/getUserCart"]
-  },
-  methods: {
-    quantityIncrement(){
-      this.newItemQuantity++
-    },
-    quantityDecrement(){
-      this.newItemQuantity--
-    },
-    updateMode(index, item){
-      console.log("test", JSON.stringify(item))
-      this.$set(item, "show", true)
-      this.newItemQuantity = this.cartItems[index].itemQuantity
-    },
-    deleteCartItem(index){
-      this.showSnackbar = true
-      this.snackbarTimeout = 1000
-      this.snackbarColor = "red"
-      this.snackbarMessage = "Item remove from cart."
-      this.$store.dispatch("uCart/deleteProductFromCart", {index: index})
-    },
-    cancelUpdate(item){
-      this.$set(item, "show", false)
-      this.newItemQuantity = 1
-    },
-    updateCart(index, item){
-      this.showSnackbar = true
-      this.snackbarTimeout = 1000
-      this.snackbarColor = "primary"
-      this.snackbarMessage = "Item quantity successfully updated."
-      this.$store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: this.newItemQuantity})
-      this.$set(item, "show", false)
-      this.newItemQuantity = 1
-    },
+    const deleteCartItem = (index) => {
+      snackBar.value.show = true
+      snackBar.value.timeout = 1000
+      snackBar.value.color = "red"
+      snackBar.value.message = "Item remove from cart."
+      store.dispatch("uCart/deleteProductFromCart", {index: index})
+    }
+    const cancelUpdate = (item) => {
+      set(item, "show", false)
+    }
+    const updateCart = (index, item) => {
+      snackBar.value.show = true
+      snackBar.value.timeout = 1000
+      snackBar.value.color = "primary"
+      snackBar.value.message = "Item quantity successfully updated."
+      store.dispatch("uCart/updateCartItemQuantity", {index: index, updatedQuantity: item.newItemQuantity})
+      set(item, "show", false)
+    }
+
+    onMounted(() => {
+      cartItems.value = store.getters["uCart/getUserCart"]
+    })
+
+    return {cartItems, snackBar, quantityIncrement, quantityDecrement, updateMode, deleteCartItem, cancelUpdate, updateCart}
   }
 }
 </script>
